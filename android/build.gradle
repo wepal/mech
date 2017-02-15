@@ -87,7 +87,7 @@ eclipse {
         sourceCompatibility = 1.6
         targetCompatibility = 1.6
     }
-        classpath {plusConfigurations +=[ project.configurations.compile]        
+        classpath {plusConfigurations +=[project.configurations.compile]        
         containers 'com.android.ide.eclipse.adt.ANDROID_FRAMEWORK', 'com.android.ide.eclipse.adt.LIBRARIES'       
     }
 
@@ -105,7 +105,7 @@ eclipse {
 // sets up the Android Idea project, using the old Ant based build.
 idea {
     module {
-        sourceDirs += file("src" );scopes =[ COMPILE: [plus: [project.configurations.compile]]]        
+        sourceDirs += file( "src" );scopes =[ COMPILE: [plus: [project.configurations.compile]]]        
 
         iml {
             withXml {
@@ -114,8 +114,7 @@ idea {
                 builder.current = node;
                 builder.component(name: "FacetManager") {
                     facet(type: "android", name: "Android") {
-                        configuration {
-                            option(name:"UPDATE_PROPERTY_FILES" , value:"true")
+                        configuration { option(name:"UPDATE_PROPERTY_FILES" , value:"true")
                         }
                     }
                 }

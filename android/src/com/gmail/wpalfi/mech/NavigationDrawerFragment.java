@@ -1,8 +1,8 @@
 package com.gmail.wpalfi.mech;
 
-
 import android.app.Activity;
 import android.app.Fragment;
+import android.net.Uri;
 import android.support.v4.view.GravityCompat;
 import android.support.v4.widget.DrawerLayout;
 import android.content.SharedPreferences;
@@ -18,24 +18,12 @@ import android.view.ViewGroup;
 import android.widget.AdapterView;
 import android.widget.ArrayAdapter;
 import android.widget.ListView;
+import android.support.v4.app.FragmentTabHost;
+//import android.support.v4.app.Fragment;
+import android.support.v4.content.ContextCompat;
 
-/**
- * Fragment used for managing interactions for and presentation of a navigation drawer.
- * See the <a href="https://developer.android.com/design/patterns/navigation-drawer.html#Interaction">
- * design guidelines</a> for a complete explanation of the behaviors implemented here.
- */
-public class NavigationDrawerFragment extends Fragment {
 
-    /**
-     * Remember the position of the selected item.
-     */
-    private static final String STATE_SELECTED_POSITION = "selected_navigation_drawer_position";
-
-    /**
-     * Per the design guidelines, you should show the drawer on launch until the user manually
-     * expands it. This shared preference tracks this.
-     */
-    private static final String PREF_USER_LEARNED_DRAWER = "navigation_drawer_learned";
+public class NavigationDrawerFragment extends android.support.v4.app.Fragment {
 
     /**
      * A pointer to the current callbacks instance (the Activity).
@@ -43,12 +31,9 @@ public class NavigationDrawerFragment extends Fragment {
     private NavigationDrawerCallbacks mCallbacks;
 
     private DrawerLayout mDrawerLayout;
-    private ListView mDrawerListView;
     private View mFragmentContainerView;
 
-    private int mCurrentSelectedPosition = 0;
-    private boolean mFromSavedInstanceState;
-    private boolean mUserLearnedDrawer;
+    private FragmentTabHost mTabHost;
 
     public NavigationDrawerFragment() {
     }
@@ -57,23 +42,27 @@ public class NavigationDrawerFragment extends Fragment {
     public void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
 
-        // Read in the flag indicating whether or not the user has demonstrated awareness of the
-        // drawer. See PREF_USER_LEARNED_DRAWER for details.
-        SharedPreferences sp = PreferenceManager.getDefaultSharedPreferences(getActivity());
-        mUserLearnedDrawer = sp.getBoolean(PREF_USER_LEARNED_DRAWER, false);
-
-        if (savedInstanceState != null) {
-            mCurrentSelectedPosition = savedInstanceState.getInt(STATE_SELECTED_POSITION);
-            mFromSavedInstanceState = true;
-        }
-
-        // Select either the default item (0) or the last selected item.
-        selectItem(mCurrentSelectedPosition);
     }
 
     @Override
     public View onCreateView(LayoutInflater inflater, ViewGroup container,
                              Bundle savedInstanceState) {
+
+        View rootView = inflater.inflate(R.layout.drawer_main,container, false);
+
+        mTabHost = (FragmentTabHost)rootView.findViewById(android.R.id.tabhost);
+        mTabHost.setup(getActivity(), getFragmentManager(), android.R.id.tabcontent);
+
+        mTabHost.addTab(mTabHost.newTabSpec("nodes").setIndicator("Nodes"),
+                NodesFragment.class, null);
+        mTabHost.addTab(mTabHost.newTabSpec("fragmentc").setIndicator("Fragment C"),
+                StupidFragment.class, null);
+        mTabHost.addTab(mTabHost.newTabSpec("fragmentd").setIndicator("Fragment D"),
+                StupidFragment.class, null);
+
+
+        return rootView;
+/*
         mDrawerListView = (ListView) inflater.inflate(
                 R.layout.drawer_main, container, false);
         mDrawerListView.setOnItemClickListener(new AdapterView.OnItemClickListener() {
@@ -93,7 +82,7 @@ public class NavigationDrawerFragment extends Fragment {
                         "Debug Renderer"
                 }));
         mDrawerListView.setItemChecked(mCurrentSelectedPosition, true);
-        return mDrawerListView;
+        return mDrawerListView;*/
     }
 
     public boolean isDrawerOpen() {
@@ -110,12 +99,14 @@ public class NavigationDrawerFragment extends Fragment {
         mFragmentContainerView = getActivity().findViewById(fragmentId);
         mDrawerLayout = drawerLayout;
 
+        mDrawerLayout.setScrimColor(ContextCompat.getColor(getActivity(), android.R.color.transparent));
+
         // set a custom shadow that overlays the main content when the drawer opens
         mDrawerLayout.setDrawerShadow(R.drawable.drawer_shadow, GravityCompat.START);
-        // set up the drawer's list view with items and click listener
+        // set up the drawer's list view with items and click listene
     }
 
-    private void selectItem(int position) {
+    /*private void selectItem(int position) {
         mCurrentSelectedPosition = position;
         if (mDrawerListView != null) {
             mDrawerListView.setItemChecked(position, true);
@@ -126,7 +117,7 @@ public class NavigationDrawerFragment extends Fragment {
         if (mCallbacks != null) {
             mCallbacks.onNavigationDrawerItemSelected(position);
         }
-    }
+    }*/
 
     @Override
     public void onAttach(Activity activity) {
@@ -143,13 +134,6 @@ public class NavigationDrawerFragment extends Fragment {
         super.onDetach();
         mCallbacks = null;
     }
-
-    @Override
-    public void onSaveInstanceState(Bundle outState) {
-        super.onSaveInstanceState(outState);
-        outState.putInt(STATE_SELECTED_POSITION, mCurrentSelectedPosition);
-    }
-
 
     /**
      * Callbacks interface that all activities using this fragment must implement.

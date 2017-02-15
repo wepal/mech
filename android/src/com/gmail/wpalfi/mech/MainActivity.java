@@ -11,10 +11,11 @@ import android.view.View;
 import android.view.ViewGroup;
 import android.widget.FrameLayout;
 import android.support.v4.app.FragmentTransaction;
+import android.support.v4.app.FragmentActivity;
 import com.badlogic.gdx.backends.android.AndroidFragmentApplication;
 
-public class MainActivity extends FragmentActivity
-        implements AndroidFragmentApplication.Callbacks,NavigationDrawerFragment.NavigationDrawerCallbacks
+public class MainActivity extends android.support.v4.app.FragmentActivity
+        implements AndroidFragmentApplication.Callbacks,NavigationDrawerFragment.NavigationDrawerCallbacks,NodesFragment.OnFragmentInteractionListener, ColorsFragment.ColorsListener
         {
     private NavigationDrawerFragment mNavigationDrawerFragment;
     private SceneFragment mSceneFragment;
@@ -24,7 +25,7 @@ public class MainActivity extends FragmentActivity
         setContentView(R.layout.activity_main);
 
         mNavigationDrawerFragment = (NavigationDrawerFragment)
-                getFragmentManager().findFragmentById(R.id.navigation_drawer);
+                getSupportFragmentManager().findFragmentById(R.id.navigation_drawer);
 
         // Set up the drawer.
         mNavigationDrawerFragment.setUp(
@@ -68,5 +69,14 @@ public class MainActivity extends FragmentActivity
 
     @Override
     public void exit() {}
-}
 
+    @Override
+    public void onFragmentInteraction() {
+
+    }
+
+    @Override
+    public void setColor() {
+
+    }
+}
