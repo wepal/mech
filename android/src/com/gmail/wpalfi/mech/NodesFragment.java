@@ -8,23 +8,20 @@ import android.support.v4.app.FragmentTransaction;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
+import android.widget.SeekBar;
 
 
-public class NodesFragment extends Fragment {
+public class NodesFragment extends PropertiesFragment {
 
-    private OnFragmentInteractionListener mListener;
+    private SeekBar _radiusSeekBar;
+    private SeekBar _strengthSeekBar;
 
     public NodesFragment() {
     }
 
-    /*public static NodesFragment newInstance() {
-        NodesFragment fragment = new NodesFragment();
-        return fragment;
-    }*/
-
     @Override
     public void onCreate(Bundle savedInstanceState) {
-        super.onCreate(savedInstanceState); 
+        super.onCreate(savedInstanceState);
     }
 
     @Override
@@ -37,34 +34,34 @@ public class NodesFragment extends Fragment {
         trans.replace(R.id.colorsFragmentPlaceholder, new ColorsFragment());
         trans.commit();
 
+        _radiusSeekBar = (SeekBar) view.findViewById(R.id.radiusSeekBar);
+        _radiusSeekBar.setOnTouchListener(new SeekBarTouchGuard());
+        _radiusSeekBar.setOnSeekBarChangeListener(new SeekBarListener() {
+            @Override
+            public void onProgressChanged(SeekBar seekBar, int progress, boolean fromUser) {
+                if(!fromUser){
+                    return;
+                }
+                Properties p=_propertiesProvider.getProperties();
+                p.radius = 3f * progress / 100f;
+                _propertiesProvider.setProperties(p);
+            }
+        });
+
+        _strengthSeekBar = (SeekBar) view.findViewById(R.id.strengthSeekBar);
+        _strengthSeekBar.setOnTouchListener(new SeekBarTouchGuard());
+        _strengthSeekBar.setOnSeekBarChangeListener(new SeekBarListener() {
+            @Override
+            public void onProgressChanged(SeekBar seekBar, int progress, boolean fromUser) {
+                //_interaction.setStrength(3f * progress / 100f);
+            }
+        });
+
         return view;
     }
 
-    // TODO: Rename method, update argument and hook method into UI event
-    public void onButtonPressed(Uri uri) {
-        if (mListener != null) {
-            mListener.onFragmentInteraction();
-        }
-    }
-
     @Override
-    public void onAttach(Context context) {
-        super.onAttach(context);
-        if (context instanceof OnFragmentInteractionListener) {
-            mListener = (OnFragmentInteractionListener) context;
-        } else {
-            throw new RuntimeException(context.toString()
-                    + " must implement OnFragmentInteractionListener");
-        }
-    }
-
-    @Override
-    public void onDetach() {
-        super.onDetach();
-        mListener = null;
-    }
-
-    public interface OnFragmentInteractionListener {
-        void onFragmentInteraction();
+    public void propertiesChanged(Properties properties) {
+        //_radiusSeekBar.setProgress((int)(properties.radius/3f*100f));
     }
 }

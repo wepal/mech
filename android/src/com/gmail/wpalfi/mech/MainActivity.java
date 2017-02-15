@@ -15,7 +15,7 @@ import android.support.v4.app.FragmentActivity;
 import com.badlogic.gdx.backends.android.AndroidFragmentApplication;
 
 public class MainActivity extends android.support.v4.app.FragmentActivity
-        implements AndroidFragmentApplication.Callbacks,NavigationDrawerFragment.NavigationDrawerCallbacks,NodesFragment.OnFragmentInteractionListener, ColorsFragment.ColorsListener
+        implements AndroidFragmentApplication.Callbacks
         {
     private NavigationDrawerFragment mNavigationDrawerFragment;
     private SceneFragment mSceneFragment;
@@ -34,17 +34,12 @@ public class MainActivity extends android.support.v4.app.FragmentActivity
 
         mSceneFragment = new SceneFragment();
 
-        /*FragmentTransaction trans = getSupportFragmentManager().beginTransaction();
-        trans.replace(R.id.container1, new StupidFragment());// AndroidLauncher.GameFragment());// mSceneFragment);
-        trans.commit();
-*/
-
         FragmentTransaction trans = getSupportFragmentManager().beginTransaction();
         trans.replace(R.id.container, mSceneFragment);
         trans.commit();
     }
 
-    @Override
+    /*@Override
     public void onNavigationDrawerItemSelected(int position) {
         if(mSceneFragment!=null){
             switch(position){
@@ -62,21 +57,11 @@ public class MainActivity extends android.support.v4.app.FragmentActivity
                     break;
             }
         }
-    }
+    }*/
 
     public void onSectionAttached(int number) {
     }
 
     @Override
     public void exit() {}
-
-    @Override
-    public void onFragmentInteraction() {
-
-    }
-
-    @Override
-    public void setColor() {
-
-    }
 }

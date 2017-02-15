@@ -2,6 +2,7 @@ package com.gmail.wpalfi.mech;
 
 import android.app.Activity;
 import android.app.Fragment;
+import android.content.Context;
 import android.net.Uri;
 import android.support.v4.view.GravityCompat;
 import android.support.v4.widget.DrawerLayout;
@@ -21,14 +22,10 @@ import android.widget.ListView;
 import android.support.v4.app.FragmentTabHost;
 //import android.support.v4.app.Fragment;
 import android.support.v4.content.ContextCompat;
+import android.widget.TabHost;
 
 
-public class NavigationDrawerFragment extends android.support.v4.app.Fragment {
-
-    /**
-     * A pointer to the current callbacks instance (the Activity).
-     */
-    private NavigationDrawerCallbacks mCallbacks;
+public class NavigationDrawerFragment extends PropertiesFragment implements TabHost.OnTabChangeListener{
 
     private DrawerLayout mDrawerLayout;
     private View mFragmentContainerView;
@@ -55,34 +52,13 @@ public class NavigationDrawerFragment extends android.support.v4.app.Fragment {
 
         mTabHost.addTab(mTabHost.newTabSpec("nodes").setIndicator("Nodes"),
                 NodesFragment.class, null);
-        mTabHost.addTab(mTabHost.newTabSpec("fragmentc").setIndicator("Fragment C"),
+        mTabHost.addTab(mTabHost.newTabSpec("edges").setIndicator("Edges"),
                 StupidFragment.class, null);
         mTabHost.addTab(mTabHost.newTabSpec("fragmentd").setIndicator("Fragment D"),
                 StupidFragment.class, null);
-
+        mTabHost.setOnTabChangedListener(this);
 
         return rootView;
-/*
-        mDrawerListView = (ListView) inflater.inflate(
-                R.layout.drawer_main, container, false);
-        mDrawerListView.setOnItemClickListener(new AdapterView.OnItemClickListener() {
-            @Override
-            public void onItemClick(AdapterView<?> parent, View view, int position, long id) {
-                selectItem(position);
-            }
-        });
-        mDrawerListView.setAdapter(new ArrayAdapter<String>(
-                getActivity(),
-                android.R.layout.simple_list_item_1,
-                android.R.id.text1,
-                new String[]{
-                        "Node",
-                        "Edge",
-                        "Run/Pause",
-                        "Debug Renderer"
-                }));
-        mDrawerListView.setItemChecked(mCurrentSelectedPosition, true);
-        return mDrawerListView;*/
     }
 
     public boolean isDrawerOpen() {
@@ -106,42 +82,18 @@ public class NavigationDrawerFragment extends android.support.v4.app.Fragment {
         // set up the drawer's list view with items and click listene
     }
 
-    /*private void selectItem(int position) {
-        mCurrentSelectedPosition = position;
-        if (mDrawerListView != null) {
-            mDrawerListView.setItemChecked(position, true);
-        }
-        if (mDrawerLayout != null) {
-            mDrawerLayout.closeDrawer(mFragmentContainerView);
-        }
-        if (mCallbacks != null) {
-            mCallbacks.onNavigationDrawerItemSelected(position);
-        }
-    }*/
-
     @Override
-    public void onAttach(Activity activity) {
-        super.onAttach(activity);
-        try {
-            mCallbacks = (NavigationDrawerCallbacks) activity;
-        } catch (ClassCastException e) {
-            throw new ClassCastException("Activity must implement NavigationDrawerCallbacks.");
+    public void onTabChanged(String tabId) {
+        Properties p=_propertiesProvider.getProperties();
+        switch(tabId){
+            case "nodes":
+                p.tool=Tool.NODE;
+                break;
+            case "edges":
+                p.tool=Tool.EDGE;
+                break;
         }
+        _propertiesProvider.setProperties(p);
     }
 
-    @Override
-    public void onDetach() {
-        super.onDetach();
-        mCallbacks = null;
-    }
-
-    /**
-     * Callbacks interface that all activities using this fragment must implement.
-     */
-    public static interface NavigationDrawerCallbacks {
-        /**
-         * Called when an item in the navigation drawer is selected.
-         */
-        void onNavigationDrawerItemSelected(int position);
-    }
 }

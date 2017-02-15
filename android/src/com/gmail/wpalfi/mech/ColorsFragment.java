@@ -7,57 +7,42 @@ import android.support.v4.app.Fragment;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
+import android.widget.Button;
+import android.view.View.OnClickListener;
+
+import com.badlogic.gdx.scenes.scene2d.utils.ClickListener;
 
 
-public class ColorsFragment extends Fragment {
-
-    private ColorsListener mListener;
+public class ColorsFragment extends PropertiesFragment implements OnClickListener{
 
     public ColorsFragment() {
-    }
-
-    /*public static NodesFragment newInstance() {
-        NodesFragment fragment = new NodesFragment();
-        return fragment;
-    }*/
-
-    @Override
-    public void onCreate(Bundle savedInstanceState) {
-        super.onCreate(savedInstanceState);
     }
 
     @Override
     public View onCreateView(LayoutInflater inflater, ViewGroup container,
                              Bundle savedInstanceState) {
         // Inflate the layout for this fragment
-        return inflater.inflate(R.layout.fragment_colors, container, false);
-    }
+        View view = inflater.inflate(R.layout.fragment_colors, container, false);
 
-    // TODO: Rename method, update argument and hook method into UI event
-    public void onButtonPressed(Uri uri) {
-        if (mListener != null) {
-            mListener.setColor();
-        }
-    }
+        Button button = (Button) view.findViewById(R.id.button_white);
+        button.setOnClickListener(this);
+        button = (Button) view.findViewById(R.id.button_yellow);
+        button.setOnClickListener(this);
 
-    @Override
-    public void onAttach(Context context) {
-        super.onAttach(context);
-        if (context instanceof ColorsListener) {
-            mListener = (ColorsListener) context;
-        } else {
-            throw new RuntimeException(context.toString()
-                    + " must implement OnFragmentInteractionListener");
-        }
+        return view;
     }
 
     @Override
-    public void onDetach() {
-        super.onDetach();
-        mListener = null;
+    public void onClick(View v) {
+        Properties p=_propertiesProvider.getProperties();
+        switch(v.getId()) {
+            case R.id.button_white:
+                p.color=Color.WHITE;
+                break;
+            case R.id.button_yellow:
+                p.color=Color.YELLOW;
+        }
+        _propertiesProvider.setProperties(p);
     }
 
-    public interface ColorsListener {
-        void setColor();
-    }
 }

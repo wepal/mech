@@ -26,7 +26,7 @@ import java.util.List;
 import java.util.ArrayList;
 import java.util.HashMap;
 
-public class Mech extends ApplicationAdapter implements InputProcessor{
+public class Mech extends ApplicationAdapter implements InputProcessor,PropertiesProvider{
     List<Node> nodes = new ArrayList<Node>();;
     List<Edge> edges = new ArrayList<Edge>();
     List<Pull> pulls = new ArrayList<Pull>();
@@ -34,12 +34,37 @@ public class Mech extends ApplicationAdapter implements InputProcessor{
     OrthographicCamera cam;
     ShapeRenderer renderer;
     HashMap<Integer,Drag> drags=new HashMap<Integer, Drag>();
-    Tool _tool=Tool.NONE;
-    boolean _pause=false;
     Node _drawEdgeNode;
     Box2DDebugRenderer _debugRenderer;
-    boolean _useDebugRenderer=true;
+    Properties _properties=new Properties();
+    List<PropertiesListener> _propertiesListener = new ArrayList<PropertiesListener>();
 
+    public Properties getProperties(){
+        return new Properties(_properties);
+    }
+    
+    public void setProperties(Properties properties){
+        if(properties.equals(_properties)){
+            return;
+        }
+        _properties=new Properties(properties);
+        callPropertiesListeners();
+    }
+
+    public void addPropertiesListener(PropertiesListener propertiesListener){
+        _propertiesListener.add(propertiesListener);
+    }
+
+    public void removePropertiesListener(PropertiesListener propertiesListener){
+        _propertiesListener.remove(propertiesListener);
+    }
+
+    private void callPropertiesListeners(){
+        for (PropertiesListener propertiesListener : _propertiesListener) {
+            propertiesListener.propertiesChanged(_properties);
+        }
+    }
+    
     @Override
 	public void create () {
         renderer= new ShapeRenderer();
@@ -182,7 +207,7 @@ public class Mech extends ApplicationAdapter implements InputProcessor{
         GL20 gl = Gdx.gl;
 
         long startPhysics = TimeUtils.nanoTime();
-        if (!_pause) {
+        if (!_properties.pause) {
             tick(Gdx.graphics.getDeltaTime(), 4);
         }
 
@@ -194,7 +219,7 @@ public class Mech extends ApplicationAdapter implements InputProcessor{
         cam.position.set(cam.viewportWidth / 2, cam.viewportHeight / 2, 0);
         cam.update();
 
-        if(_useDebugRenderer){
+        if(_properties.useDebugRenderer){
             _debugRenderer.render(world,cam.combined);
             _debugRenderer.render(pullWorld,cam.combined);
 
@@ -210,7 +235,7 @@ public class Mech extends ApplicationAdapter implements InputProcessor{
         for (int i = 0; i < nodes.size(); i++) {
             Node node = nodes.get(i);
             renderer.begin(ShapeRenderer.ShapeType.Line);
-            setColor(renderer, node.color);
+            setRendererColor(renderer, node.color);
             Vector2 pos = node.body.getPosition();
             renderer.circle(pos.x,pos.y,node.radius,64);
             renderer.end();
@@ -218,7 +243,7 @@ public class Mech extends ApplicationAdapter implements InputProcessor{
         for (int i = 0; i < edges.size(); i++) {
             Edge edge = edges.get(i);
             renderer.begin(ShapeRenderer.ShapeType.Line);
-            setColor(renderer, edge.color());
+            setRendererColor(renderer, edge.color());
             Vector2 pos1 = edge.node1().body.getPosition();
             Vector2 pos2 = edge.node2().body.getPosition();
             Vector2 dir = new Vector2(pos2).sub(pos1).setLength(1f);
@@ -237,7 +262,7 @@ public class Mech extends ApplicationAdapter implements InputProcessor{
         }
 	}
 
-    void setColor(ShapeRenderer renderer, Color color){
+    void setRendererColor(ShapeRenderer renderer, Color color){
         if(color==Color.WHITE)
             renderer.setColor(1, 1, 1, 1);
         else
@@ -309,12 +334,12 @@ public class Mech extends ApplicationAdapter implements InputProcessor{
             pullWorld.destroyJoint(pull.pullBackJoint);
             return true;
         }
-        if(_tool==Tool.NODE){
-            Node node=createNode(mousePos.x,mousePos.y,.3f,Color.YELLOW);
+        if(_properties.tool==Tool.NODE){
+            Node node=createNode(mousePos.x,mousePos.y,_properties.radius,_properties.color);
             nodes.add(node);
             return true;
         }
-        if(_tool==Tool.EDGE){
+        if(_properties.tool==Tool.EDGE){
             Node node = findNode(mousePos);
             if(node!=null){
                 _drawEdgeNode=node;
@@ -333,7 +358,7 @@ public class Mech extends ApplicationAdapter implements InputProcessor{
             drags.remove(pointer);
             createPullBackJoint(pulls.get(drag.pull));
         }
-        if(_tool==Tool.EDGE && _drawEdgeNode!=null){
+        if(_properties.tool==Tool.EDGE && _drawEdgeNode!=null){
             Node node = findNode(mousePos);
             if(node!=null){
                 edges.add(new Edge(world, _drawEdgeNode, node, Color.YELLOW));
@@ -364,15 +389,4 @@ public class Mech extends ApplicationAdapter implements InputProcessor{
         return false;
     }
 
-    public void setTool(Tool tool){
-        _tool =tool;
-    }
-
-    public void togglePause() {
-        _pause=!_pause;
-    }
-
-    public void toggleDebugRenderer() {
-        _useDebugRenderer=!_useDebugRenderer;
-    }
 }
