@@ -21,8 +21,14 @@ public class MainActivity extends android.support.v4.app.FragmentActivity
     private SceneFragment mSceneFragment;
 
     protected void onCreate(Bundle savedInstanceState) {
+        mSceneFragment = new SceneFragment();
+
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
+
+        FragmentTransaction trans = getSupportFragmentManager().beginTransaction();
+        trans.replace(R.id.container, mSceneFragment);
+        trans.commit();
 
         mNavigationDrawerFragment = (NavigationDrawerFragment)
                 getSupportFragmentManager().findFragmentById(R.id.navigation_drawer);
@@ -31,12 +37,6 @@ public class MainActivity extends android.support.v4.app.FragmentActivity
         mNavigationDrawerFragment.setUp(
                 R.id.navigation_drawer,
                 (DrawerLayout) findViewById(R.id.drawer_layout));
-
-        mSceneFragment = new SceneFragment();
-
-        FragmentTransaction trans = getSupportFragmentManager().beginTransaction();
-        trans.replace(R.id.container, mSceneFragment);
-        trans.commit();
     }
 
     /*@Override
@@ -59,7 +59,8 @@ public class MainActivity extends android.support.v4.app.FragmentActivity
         }
     }*/
 
-    public void onSectionAttached(int number) {
+    public PropertiesProvider getPropertiesProvider() {
+        return mSceneFragment._mech;
     }
 
     @Override

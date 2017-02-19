@@ -62,6 +62,6 @@ public class NodesFragment extends PropertiesFragment {
 
     @Override
     public void propertiesChanged(Properties properties) {
-        //_radiusSeekBar.setProgress((int)(properties.radius/3f*100f));
+        _radiusSeekBar.setProgress((int)(properties.radius/3f*100f));
     }
 }

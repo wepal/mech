@@ -24,9 +24,9 @@ public class Edge{
         _color=color;
 
         DistanceJointDef distJointDef = new DistanceJointDef();
-        Vector2 p1=_node1.body.getPosition();
-        Vector2 p2=_node2.body.getPosition();
-        distJointDef.initialize(_node1.body, _node2.body, p1, p2);
+        Vector2 p1=_node1.getBody().getPosition();
+        Vector2 p2=_node2.getBody().getPosition();
+        distJointDef.initialize(_node1.getBody(), _node2.getBody(), p1, p2);
         distJointDef.dampingRatio=1;
         distJointDef.frequencyHz=10f;//2f;
         _distanceJoint = (DistanceJoint) world.createJoint(distJointDef);
@@ -50,12 +50,12 @@ public class Edge{
         _body2.setType(bodyType);
 
         RevoluteJointDef revoluteJointDef1 = new RevoluteJointDef();
-        revoluteJointDef1.initialize(node1.body, _body1, node1.body.getPosition());
+        revoluteJointDef1.initialize(node1.getBody(), _body1, node1.getBody().getPosition());
         revoluteJointDef1.collideConnected=false;
         _revoluteJoint1=(RevoluteJoint)world.createJoint(revoluteJointDef1);
 
         RevoluteJointDef revoluteJointDef2 = new RevoluteJointDef();
-        revoluteJointDef2.initialize(node2.body, _body2, node2.body.getPosition());
+        revoluteJointDef2.initialize(node2.getBody(), _body2, node2.getBody().getPosition());
         revoluteJointDef2.collideConnected=false;
         _revoluteJoint2=(RevoluteJoint)world.createJoint(revoluteJointDef2);
 
@@ -68,8 +68,8 @@ public class Edge{
     }
 
     public void update(){
-        Vector2 p1 = node1().body.getPosition();
-        Vector2 p2 = node2().body.getPosition();
+        Vector2 p1 = node1().getBody().getPosition();
+        Vector2 p2 = node2().getBody().getPosition();
         float dist = p1.dst(p2);
         if(Math.abs((dist-_lastUpdateDist)/_lastUpdateDist)<.1){
             return;

@@ -11,11 +11,12 @@ public class SceneFragment extends AndroidFragmentApplication
 {
     public Mech _mech;
 
-    // 5. Add the initializeForView() code in the Fragment's onCreateView method.
+    public SceneFragment(){
+        _mech=new Mech();
+    }
+
     @Override
-    public View onCreateView(LayoutInflater inflater, ViewGroup container, Bundle savedInstanceState)
-    {
-        _mech = new Mech();
+    public View onCreateView(LayoutInflater inflater, ViewGroup container, Bundle savedInstanceState){
         return initializeForView(_mech);
     }
 }

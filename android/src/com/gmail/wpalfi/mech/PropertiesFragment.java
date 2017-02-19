@@ -20,12 +20,7 @@ public class PropertiesFragment extends Fragment implements PropertiesListener{
     @Override
     public void onAttach(Context context) {
         super.onAttach(context);
-        if (context instanceof PropertiesProvider) {
-            _propertiesProvider = (PropertiesProvider) context;
-        } else {
-            throw new RuntimeException(context.toString()
-                    + " must implement PropertiesProvider");
-        }
+        _propertiesProvider = ((MainActivity)context).getPropertiesProvider();
         _propertiesProvider.addPropertiesListener(this);
     }
 

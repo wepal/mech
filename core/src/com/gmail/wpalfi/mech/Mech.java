@@ -38,17 +38,33 @@ public class Mech extends ApplicationAdapter implements InputProcessor,Propertie
     Box2DDebugRenderer _debugRenderer;
     Properties _properties=new Properties();
     List<PropertiesListener> _propertiesListener = new ArrayList<PropertiesListener>();
+    List<Object> _selection=new ArrayList<Object>();
 
     public Properties getProperties(){
         return new Properties(_properties);
     }
     
-    public void setProperties(Properties properties){
+    public void setProperties(final Properties properties) {
+        Gdx.app.postRunnable(new Runnable() {
+            @Override
+            public void run() {
+                setPropertiesInternal(properties);
+            }
+        });
+    }
+
+    private void setPropertiesInternal(Properties properties){
         if(properties.equals(_properties)){
             return;
         }
         _properties=new Properties(properties);
         callPropertiesListeners();
+        for (Object o : _selection) {
+            if(o instanceof Node){
+                Node node=(Node)o;
+                node.setProperties(_properties.radius,_properties.color);
+            }
+        }
     }
 
     public void addPropertiesListener(PropertiesListener propertiesListener){
@@ -77,9 +93,9 @@ public class Mech extends ApplicationAdapter implements InputProcessor,Propertie
         cam = new OrthographicCamera(Gdx.graphics.getWidth(), Gdx.graphics.getHeight());
         Gdx.input.setInputProcessor(this);
 
-        nodes.add(createNode(2,6,(float)0.3,Color.WHITE));
-        nodes.add(createNode(9,5,(float)0.3,Color.WHITE));
-        nodes.add(createNode(6,4,(float)0.3,Color.YELLOW));
+        nodes.add(new Node(world, 2,6,(float)0.3,Color.WHITE));
+        nodes.add(new Node(world, 9,5,(float)0.3,Color.WHITE));
+        nodes.add(new Node(world, 6,4,(float)0.3,Color.YELLOW));
 
         edges.add(new Edge(world, nodes.get(0),nodes.get(1),Color.WHITE));
         edges.add(new Edge(world, nodes.get(0),nodes.get(2),Color.YELLOW));
@@ -101,38 +117,7 @@ public class Mech extends ApplicationAdapter implements InputProcessor,Propertie
 
     }
 
-    Node createNode(float x, float y, float radius, Color color) {
-        Node node=new Node();
-        node.x=0;
-        node.y=0;
-        node.radius=radius;
-        node.color=color;
-
-        CircleShape sd = new CircleShape();
-        sd.setRadius(radius);
-
-        FixtureDef fdef = new FixtureDef();
-        fdef.shape = sd;
-        fdef.density = 1.0f;
-        fdef.friction = 0.3f;
-        fdef.restitution = 0.6f;
-
-        BodyDef bd = new BodyDef();
-        // bd.isBullet = true;
-        bd.allowSleep = true;
-        bd.position.set(x, y);
-        bd.fixedRotation = true;
-        Body body = world.createBody(bd);
-        body.createFixture(fdef);
-        if(color==Color.WHITE)
-            body.setType(BodyDef.BodyType.StaticBody);
-        else
-            body.setType(BodyDef.BodyType.DynamicBody);
-
-        node.body=body;
-        return node;
-    }
-    Pull createPull(float x, float y) {
+    private Pull createPull(float x, float y) {
         Pull pull=new Pull();
         pull.homeX=x;
         pull.homeY=y;
@@ -169,7 +154,7 @@ public class Mech extends ApplicationAdapter implements InputProcessor,Propertie
         return pull;
     }
 
-    void createPullBackJoint(Pull pull){
+    private void createPullBackJoint(Pull pull){
         DistanceJointDef pullBackJointDef = new DistanceJointDef();
         pullBackJointDef.dampingRatio=3;
         pullBackJointDef.frequencyHz=3;
@@ -179,7 +164,7 @@ public class Mech extends ApplicationAdapter implements InputProcessor,Propertie
         pull.pullBackJoint = (DistanceJoint)pullWorld.createJoint(pullBackJointDef);
     }
 
-    void tick (float timeStep, int iters) {
+    private void tick (float timeStep, int iters) {
         for(int i=0; i<edges.size();i++) {
             edges.get(i).update();
         }
@@ -228,27 +213,27 @@ public class Mech extends ApplicationAdapter implements InputProcessor,Propertie
         }
     }
 
-    void renderNormal(){
+    private void renderNormal(){
         GL20 gl = Gdx.gl;
         gl.glLineWidth(10);
         renderer.setProjectionMatrix(cam.combined);
         for (int i = 0; i < nodes.size(); i++) {
             Node node = nodes.get(i);
             renderer.begin(ShapeRenderer.ShapeType.Line);
-            setRendererColor(renderer, node.color);
-            Vector2 pos = node.body.getPosition();
-            renderer.circle(pos.x,pos.y,node.radius,64);
+            setRendererColor(renderer, node.getColor());
+            Vector2 pos = node.getBody().getPosition();
+            renderer.circle(pos.x,pos.y,node.getRadius(),64);
             renderer.end();
         }
         for (int i = 0; i < edges.size(); i++) {
             Edge edge = edges.get(i);
             renderer.begin(ShapeRenderer.ShapeType.Line);
             setRendererColor(renderer, edge.color());
-            Vector2 pos1 = edge.node1().body.getPosition();
-            Vector2 pos2 = edge.node2().body.getPosition();
+            Vector2 pos1 = edge.node1().getBody().getPosition();
+            Vector2 pos2 = edge.node2().getBody().getPosition();
             Vector2 dir = new Vector2(pos2).sub(pos1).setLength(1f);
-            Vector2 start = new Vector2(pos1).add(new Vector2(dir).scl(edge.node1().radius));
-            Vector2 end = new Vector2(pos2).add(new Vector2(dir).scl(-edge.node2().radius));
+            Vector2 start = new Vector2(pos1).add(new Vector2(dir).scl(edge.node1().getRadius()));
+            Vector2 end = new Vector2(pos2).add(new Vector2(dir).scl(-edge.node2().getRadius()));
             renderer.line(start,end);
             renderer.end();
         }
@@ -262,7 +247,7 @@ public class Mech extends ApplicationAdapter implements InputProcessor,Propertie
         }
 	}
 
-    void setRendererColor(ShapeRenderer renderer, Color color){
+    private void setRendererColor(ShapeRenderer renderer, Color color){
         if(color==Color.WHITE)
             renderer.setColor(1, 1, 1, 1);
         else
@@ -304,9 +289,9 @@ public class Mech extends ApplicationAdapter implements InputProcessor,Propertie
     private Node findNode(Vector2 mousePos) {
         for(int i=0; i<nodes.size();i++) {
             Node node = nodes.get(i);
-            Vector2 pos = node.body.getPosition();
+            Vector2 pos = node.getBody().getPosition();
             float dist = pos.dst(mousePos);
-            if(dist<node.radius){
+            if(dist<node.getRadius()){
                 return node;
             }
         }
@@ -335,8 +320,18 @@ public class Mech extends ApplicationAdapter implements InputProcessor,Propertie
             return true;
         }
         if(_properties.tool==Tool.NODE){
-            Node node=createNode(mousePos.x,mousePos.y,_properties.radius,_properties.color);
-            nodes.add(node);
+            Node node = findNode(mousePos);
+            if(node!=null) {
+                if(_selection.contains(node)){
+                    _selection.remove(node);
+                }else {
+                    _selection.add(node);
+                }
+                onSelectionChanged();
+            }else{
+                node=new Node(world, mousePos.x,mousePos.y,_properties.radius,_properties.color);
+                nodes.add(node);
+            }
             return true;
         }
         if(_properties.tool==Tool.EDGE){
@@ -346,6 +341,14 @@ public class Mech extends ApplicationAdapter implements InputProcessor,Propertie
             }
         }
         return false;
+    }
+    private void onSelectionChanged(){
+        for (Object o : _selection) {
+            if(o instanceof Node){
+                _properties.radius=((Node)o).getRadius();
+            }
+        }
+        callPropertiesListeners();
     }
 
     @Override
