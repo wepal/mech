@@ -7,7 +7,7 @@ package com.gmail.wpalfi.mech;
 public class Properties {
     float radius=.3f;
     Color color=Color.WHITE;
-    Tool tool=Tool.NONE;
+    Tool tool=Tool.NODE;
     boolean pause=false;
     boolean useDebugRenderer=true;
 

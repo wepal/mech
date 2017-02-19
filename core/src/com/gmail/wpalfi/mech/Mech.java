@@ -39,6 +39,7 @@ public class Mech extends ApplicationAdapter implements InputProcessor,Propertie
     Properties _properties=new Properties();
     List<PropertiesListener> _propertiesListener = new ArrayList<PropertiesListener>();
     List<Object> _selection=new ArrayList<Object>();
+    ToolBar _toolBar;
 
     public Properties getProperties(){
         return new Properties(_properties);
@@ -115,6 +116,7 @@ public class Mech extends ApplicationAdapter implements InputProcessor,Propertie
         pull.drives.add(drive);
         pulls.add(pull);
 
+        _toolBar=new ToolBar(this);
     }
 
     private Pull createPull(float x, float y) {
@@ -211,6 +213,8 @@ public class Mech extends ApplicationAdapter implements InputProcessor,Propertie
         }else{
             renderNormal();
         }
+
+        _toolBar.render();
     }
 
     private void renderNormal(){
@@ -245,7 +249,7 @@ public class Mech extends ApplicationAdapter implements InputProcessor,Propertie
             renderer.circle(pos.x,pos.y,1,64);
             renderer.end();
         }
-	}
+    }
 
     private void setRendererColor(ShapeRenderer renderer, Color color){
         if(color==Color.WHITE)
@@ -300,6 +304,9 @@ public class Mech extends ApplicationAdapter implements InputProcessor,Propertie
 
     @Override
     public boolean touchDown(int screenX, int screenY, int pointer, int button) {
+        if(_toolBar.touchDown(screenX,screenY, pointer, button)){
+            return true;
+        }
         Vector3 mousePos3 = cam.unproject(new Vector3(screenX,screenY,0));
         Vector2 mousePos = new Vector2(mousePos3.x,mousePos3.y);
         Integer pull_=findPull(mousePos);
@@ -353,6 +360,9 @@ public class Mech extends ApplicationAdapter implements InputProcessor,Propertie
 
     @Override
     public boolean touchUp(int screenX, int screenY, int pointer, int button) {
+        if(_toolBar.touchUp(screenX,screenY, pointer, button)){
+            return true;
+        }
         Vector3 mousePos3 = cam.unproject(new Vector3(screenX,screenY,0));
         Vector2 mousePos = new Vector2(mousePos3.x,mousePos3.y);
         if(drags.containsKey(pointer)) {
@@ -373,6 +383,9 @@ public class Mech extends ApplicationAdapter implements InputProcessor,Propertie
 
     @Override
     public boolean touchDragged(int screenX, int screenY, int pointer) {
+        if(_toolBar.touchDragged(screenX,screenY, pointer)){
+            return true;
+        }
         if(drags.containsKey(pointer)){
             Vector3 mousePos3 = cam.unproject(new Vector3(screenX,screenY,0));
             Vector2 mousePos = new Vector2(mousePos3.x,mousePos3.y);

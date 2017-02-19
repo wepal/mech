@@ -17,7 +17,7 @@ import com.badlogic.gdx.backends.android.AndroidFragmentApplication;
 public class MainActivity extends android.support.v4.app.FragmentActivity
         implements AndroidFragmentApplication.Callbacks
         {
-    private NavigationDrawerFragment mNavigationDrawerFragment;
+    //private NavigationDrawerFragment mNavigationDrawerFragment;
     private SceneFragment mSceneFragment;
 
     protected void onCreate(Bundle savedInstanceState) {
@@ -29,7 +29,7 @@ public class MainActivity extends android.support.v4.app.FragmentActivity
         FragmentTransaction trans = getSupportFragmentManager().beginTransaction();
         trans.replace(R.id.container, mSceneFragment);
         trans.commit();
-
+/*
         mNavigationDrawerFragment = (NavigationDrawerFragment)
                 getSupportFragmentManager().findFragmentById(R.id.navigation_drawer);
 
@@ -37,27 +37,8 @@ public class MainActivity extends android.support.v4.app.FragmentActivity
         mNavigationDrawerFragment.setUp(
                 R.id.navigation_drawer,
                 (DrawerLayout) findViewById(R.id.drawer_layout));
+                */
     }
-
-    /*@Override
-    public void onNavigationDrawerItemSelected(int position) {
-        if(mSceneFragment!=null){
-            switch(position){
-                case 0:
-                    mSceneFragment._mech.setTool(Tool.NODE);
-                    break;
-                case 1:
-                    mSceneFragment._mech.setTool(Tool.EDGE);
-                    break;
-                case 2:
-                    mSceneFragment._mech.togglePause();
-                    break;
-                case 3:
-                    mSceneFragment._mech.toggleDebugRenderer();
-                    break;
-            }
-        }
-    }*/
 
     public PropertiesProvider getPropertiesProvider() {
         return mSceneFragment._mech;
