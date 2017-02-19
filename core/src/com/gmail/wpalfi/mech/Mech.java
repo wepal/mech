@@ -26,7 +26,7 @@ import java.util.List;
 import java.util.ArrayList;
 import java.util.HashMap;
 
-public class Mech extends ApplicationAdapter implements InputProcessor,PropertiesProvider{
+public class Mech extends ApplicationAdapter implements InputProcessor, MenuConsumer {
     List<Node> nodes = new ArrayList<Node>();;
     List<Edge> edges = new ArrayList<Edge>();
     List<Pull> pulls = new ArrayList<Pull>();
@@ -37,51 +37,50 @@ public class Mech extends ApplicationAdapter implements InputProcessor,Propertie
     Node _drawEdgeNode;
     Box2DDebugRenderer _debugRenderer;
     Properties _properties=new Properties();
-    List<PropertiesListener> _propertiesListener = new ArrayList<PropertiesListener>();
     List<Object> _selection=new ArrayList<Object>();
     ToolBar _toolBar;
 
+    @Override
     public Properties getProperties(){
         return new Properties(_properties);
     }
-    
-    public void setProperties(final Properties properties) {
-        Gdx.app.postRunnable(new Runnable() {
-            @Override
-            public void run() {
-                setPropertiesInternal(properties);
-            }
-        });
+
+    @Override
+    public void setTool(Tool tool){
+        _properties.tool=tool;
     }
 
-    private void setPropertiesInternal(Properties properties){
-        if(properties.equals(_properties)){
-            return;
-        }
-        _properties=new Properties(properties);
-        callPropertiesListeners();
+    @Override
+    public void setColor(Color color){
+        _properties.color = color;
         for (Object o : _selection) {
             if(o instanceof Node){
                 Node node=(Node)o;
-                node.setProperties(_properties.radius,_properties.color);
+                node.setColor(color);
+            }
+            if(o instanceof Edge){
+                Edge edge=(Edge)o;
+                edge.setColor(color);
             }
         }
     }
 
-    public void addPropertiesListener(PropertiesListener propertiesListener){
-        _propertiesListener.add(propertiesListener);
-    }
-
-    public void removePropertiesListener(PropertiesListener propertiesListener){
-        _propertiesListener.remove(propertiesListener);
-    }
-
-    private void callPropertiesListeners(){
-        for (PropertiesListener propertiesListener : _propertiesListener) {
-            propertiesListener.propertiesChanged(_properties);
+    @Override
+    public void setRadius(float radius){
+        _properties.radius=radius;
+        for (Object o : _selection) {
+            if(o instanceof Node){
+                Node node=(Node)o;
+                node.setRadius(radius);
+            }
         }
     }
-    
+
+    @Override
+    public void setPause(boolean pause) {
+        _properties.pause=pause;
+    }
+
     @Override
 	public void create () {
         renderer= new ShapeRenderer();
@@ -355,7 +354,6 @@ public class Mech extends ApplicationAdapter implements InputProcessor,Propertie
                 _properties.radius=((Node)o).getRadius();
             }
         }
-        callPropertiesListeners();
     }
 
     @Override

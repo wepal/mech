@@ -125,6 +125,9 @@ public class Edge{
     public Color color(){
         return _color;
     }
+    public void setColor(Color color){
+        _color=color;
+    }
 
     private World _world;
     private Node _node1,_node2;

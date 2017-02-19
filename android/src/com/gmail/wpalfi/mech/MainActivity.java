@@ -40,9 +40,9 @@ public class MainActivity extends android.support.v4.app.FragmentActivity
                 */
     }
 
-    public PropertiesProvider getPropertiesProvider() {
+    /*public PropertiesProvider getPropertiesProvider() {
         return mSceneFragment._mech;
-    }
+    }*/
 
     @Override
     public void exit() {}

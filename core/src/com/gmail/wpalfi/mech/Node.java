@@ -29,12 +29,20 @@ public class Node {
         //bd.fixedRotation = true;
         _body = world.createBody(bd);
         _body.setType(BodyDef.BodyType.DynamicBody);
-        setProperties(radius_,color_);
+        updateFixture();
     }
 
-    public void setProperties(float radius_, Color color_){
-        _radius=radius_;
-        _color=color_;
+    public void setColor(Color color){
+        _color=color;
+        updateFixture();
+    }
+
+    public void setRadius(float radius) {
+        _radius = radius;
+        updateFixture();
+    }
+
+    private void updateFixture(){
         if(_fixture!=null){
             _body.destroyFixture(_fixture);
             _fixture=null;
