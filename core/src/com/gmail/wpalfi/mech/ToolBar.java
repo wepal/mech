@@ -8,17 +8,23 @@ import com.badlogic.gdx.math.Vector2;
 
 import sun.security.pkcs11.wrapper.CK_SLOT_INFO;
 
-public class ToolBar implements Slider.Listener {
+public class ToolBar implements Slider.Listener, ColorMenu.Listener {
     private MenuConsumer _menuConsumer;
     private Button _menu,_nodes,_edges,_slides,_radius,_color,_pause;
     private float _width=100;
     private Slider _slider;
+    private ColorMenu _colorMenu;
 
     @Override
     public void onSliderValueChanged(float value) {
         if(_property==Property.RADIUS){
             _menuConsumer.setRadius(value);
         }
+    }
+
+    @Override
+    public void onColorMenuValueChanged(Color value) {
+        _menuConsumer.setColor(value);
     }
 
     private enum Property {
@@ -49,6 +55,9 @@ public class ToolBar implements Slider.Listener {
         if(_slider!=null){
             _slider.render();
         }
+        if(_colorMenu!=null){
+            _colorMenu.render();
+        }
     }
 
     public boolean touchDown(int screenX, int screenY, int pointer, int button){
@@ -56,9 +65,15 @@ public class ToolBar implements Slider.Listener {
             if (_slider.touchDown(screenX, screenY,pointer,button)) {
                 return true;
             }
-            _slider = null;//lost "focus"
+        }
+        if(_colorMenu!=null){
+            if(_colorMenu.touchDown(screenX,screenY,pointer,button)){
+                return true;
+            }
         }
         _property=null;
+        _slider = null;
+        _colorMenu=null;
         return clicked(screenX,screenY);
     }
 
@@ -101,7 +116,13 @@ public class ToolBar implements Slider.Listener {
     private void setProperty(Property property){
         _property=property;
         Properties properties = _menuConsumer.getProperties();
-        float value = _property==Property.RADIUS ? properties.radius : 0;
-        _slider=new Slider(value, this);
+        switch(property){
+            case RADIUS:
+                _slider=new Slider(properties.radius, this);
+                break;
+            case COLOR:
+                _colorMenu=new ColorMenu(properties.color,this);
+                break;
+        }
     }
 }

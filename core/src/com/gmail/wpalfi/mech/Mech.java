@@ -223,7 +223,7 @@ public class Mech extends ApplicationAdapter implements InputProcessor, MenuCons
         for (int i = 0; i < nodes.size(); i++) {
             Node node = nodes.get(i);
             renderer.begin(ShapeRenderer.ShapeType.Line);
-            setRendererColor(renderer, node.getColor());
+            ColorUtil.setRendererColor(renderer, node.getColor());
             Vector2 pos = node.getBody().getPosition();
             renderer.circle(pos.x,pos.y,node.getRadius(),64);
             renderer.end();
@@ -231,7 +231,7 @@ public class Mech extends ApplicationAdapter implements InputProcessor, MenuCons
         for (int i = 0; i < edges.size(); i++) {
             Edge edge = edges.get(i);
             renderer.begin(ShapeRenderer.ShapeType.Line);
-            setRendererColor(renderer, edge.color());
+            ColorUtil.setRendererColor(renderer, edge.color());
             Vector2 pos1 = edge.node1().getBody().getPosition();
             Vector2 pos2 = edge.node2().getBody().getPosition();
             Vector2 dir = new Vector2(pos2).sub(pos1).setLength(1f);
@@ -248,13 +248,6 @@ public class Mech extends ApplicationAdapter implements InputProcessor, MenuCons
             renderer.circle(pos.x,pos.y,1,64);
             renderer.end();
         }
-    }
-
-    private void setRendererColor(ShapeRenderer renderer, Color color){
-        if(color==Color.WHITE)
-            renderer.setColor(1, 1, 1, 1);
-        else
-            renderer.setColor(1, 1, 0, 1);
     }
 	
 	@Override

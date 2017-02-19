@@ -57,11 +57,10 @@ public class Node {
         fdef.restitution = 0.6f;
 
         _fixture = _body.createFixture(fdef);
-        /*if(_color==Color.WHITE)
+        if(_color==Color.WHITE)
             _body.setType(BodyDef.BodyType.StaticBody);
         else
             _body.setType(BodyDef.BodyType.DynamicBody);
-            */
     }
     public Body getBody(){
         return _body;
