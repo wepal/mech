@@ -36,7 +36,7 @@ public class Slider {
         _renderer.setColor(63/255f,81/255f,181/255f, 1);
         float x = _x0*(1-_value)+_x1*_value;
         _renderer.rect(_x0,_y-4,x-_x0,8);
-        _renderer.circle(x,_y,26,64);
+        _renderer.circle(x, _y, _dragging?40:26, 64);
         _renderer.end();
     }
     public boolean touchDown(int screenX, int screenY, int pointer, int button) {

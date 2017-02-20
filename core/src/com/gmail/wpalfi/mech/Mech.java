@@ -13,14 +13,13 @@ import com.badlogic.gdx.physics.box2d.Body;
 import com.badlogic.gdx.physics.box2d.BodyDef;
 import com.badlogic.gdx.physics.box2d.CircleShape;
 import com.badlogic.gdx.physics.box2d.FixtureDef;
-import com.badlogic.gdx.physics.box2d.PolygonShape;
 import com.badlogic.gdx.physics.box2d.World;
 import com.badlogic.gdx.physics.box2d.joints.DistanceJoint;
 import com.badlogic.gdx.physics.box2d.joints.DistanceJointDef;
 import com.badlogic.gdx.physics.box2d.joints.MouseJoint;
 import com.badlogic.gdx.physics.box2d.joints.MouseJointDef;
-import com.badlogic.gdx.physics.box2d.joints.WeldJoint;
-import com.badlogic.gdx.physics.box2d.joints.WeldJointDef;
+import com.badlogic.gdx.physics.box2d.joints.PrismaticJoint;
+import com.badlogic.gdx.physics.box2d.joints.PrismaticJointDef;
 import com.badlogic.gdx.utils.TimeUtils;
 import java.util.List;
 import java.util.ArrayList;
@@ -29,7 +28,7 @@ import java.util.HashMap;
 public class Mech extends ApplicationAdapter implements InputProcessor, MenuConsumer {
     List<Node> nodes = new ArrayList<Node>();;
     List<Edge> edges = new ArrayList<Edge>();
-    List<Pull> pulls = new ArrayList<Pull>();
+    List<Slide> slides = new ArrayList<Slide>();
     World world, pullWorld;
     OrthographicCamera cam;
     ShapeRenderer renderer;
@@ -101,27 +100,27 @@ public class Mech extends ApplicationAdapter implements InputProcessor, MenuCons
         edges.add(new Edge(world, nodes.get(0),nodes.get(2),Color.YELLOW));
         edges.add(new Edge(world, nodes.get(1),nodes.get(2),Color.YELLOW));
 
-        Pull pull=createPull(9,3);
+        Slide slide =createSlide(9,3);
         Drive drive=new Drive();
         drive.edge=1;
         drive.length=9;
-        pull.drives.add(drive);
-        pulls.add(pull);
+        slide.drives.add(drive);
+        slides.add(slide);
 
-        pull=createPull(9,6);
+        slide =createSlide(9,6);
         drive=new Drive();
         drive.edge=2;
         drive.length=9;
-        pull.drives.add(drive);
-        pulls.add(pull);
+        slide.drives.add(drive);
+        slides.add(slide);
 
         _toolBar=new ToolBar(this);
     }
 
-    private Pull createPull(float x, float y) {
-        Pull pull=new Pull();
-        pull.homeX=x;
-        pull.homeY=y;
+    private Slide createSlide(float x, float y) {
+        Slide slide =new Slide();
+        slide.homeX=x;
+        slide.homeY=y;
 
         CircleShape sd = new CircleShape();
         sd.setRadius(1);
@@ -141,40 +140,44 @@ public class Mech extends ApplicationAdapter implements InputProcessor, MenuCons
         Body body = pullWorld.createBody(bd);
         body.createFixture(fdef);
         body.setType(BodyDef.BodyType.DynamicBody);
-        pull.body = body;
+        slide.body = body;
 
         BodyDef homeBodyDef = new BodyDef();
         homeBodyDef.allowSleep = true;
         homeBodyDef.position.set(x, y);
         Body homeBody = pullWorld.createBody(homeBodyDef );
         homeBody.setType(BodyDef.BodyType.StaticBody);
-        pull.homeBody=homeBody;
+        slide.homeBody=homeBody;
 
-        createPullBackJoint(pull);
+        PrismaticJointDef prismaticJointDef=new PrismaticJointDef();
+        prismaticJointDef.initialize(homeBody,body,homeBody.getPosition(),new Vector2(0,1));
+        slide.prismaticJoint=(PrismaticJoint)pullWorld.createJoint(prismaticJointDef);
 
-        return pull;
+        createPullBackJoint(slide);
+
+        return slide;
     }
 
-    private void createPullBackJoint(Pull pull){
+    private void createPullBackJoint(Slide slide){
         DistanceJointDef pullBackJointDef = new DistanceJointDef();
         pullBackJointDef.dampingRatio=3;
         pullBackJointDef.frequencyHz=3;
-        pullBackJointDef.bodyA=pull.body;
-        pullBackJointDef.bodyB=pull.homeBody;
+        pullBackJointDef.bodyA= slide.body;
+        pullBackJointDef.bodyB= slide.homeBody;
         pullBackJointDef.length=0;
-        pull.pullBackJoint = (DistanceJoint)pullWorld.createJoint(pullBackJointDef);
+        slide.pullBackJoint = (DistanceJoint)pullWorld.createJoint(pullBackJointDef);
     }
 
     private void tick (float timeStep, int iters) {
         for(int i=0; i<edges.size();i++) {
             edges.get(i).update();
         }
-        for(int i=0; i<pulls.size();i++){
-            Pull pull = pulls.get(i);
-            Vector2 pos = pull.body.getPosition();
-            float dist = pos.dst(pull.homeX,pull.homeY);
-            for(int j=0;j<pull.drives.size();j++) {
-                Drive drive = pull.drives.get(j);
+        for(int i = 0; i< slides.size(); i++){
+            Slide slide = slides.get(i);
+            Vector2 pos = slide.body.getPosition();
+            float dist = pos.dst(slide.homeX, slide.homeY);
+            for(int j = 0; j< slide.drives.size(); j++) {
+                Drive drive = slide.drives.get(j);
                 Edge edge = edges.get(drive.edge);
                 float weight = Math.min(dist,1f);
                 edge.setLength(drive.length * weight + edge.getRestLength() * (1-weight));
@@ -218,33 +221,38 @@ public class Mech extends ApplicationAdapter implements InputProcessor, MenuCons
 
     private void renderNormal(){
         GL20 gl = Gdx.gl;
-        gl.glLineWidth(10);
         renderer.setProjectionMatrix(cam.combined);
+        for (Object o : _selection) {
+            if(o instanceof Node){
+                Node node=(Node)o;
+                renderer.begin(ShapeRenderer.ShapeType.Filled);
+                renderer.setColor(1,1,1,1);
+                Vector2 pos = node.getBody().getPosition();
+                renderer.circle(pos.x,pos.y,node.getRadius()+.2f,64);
+                renderer.end();
+            }
+            if(o instanceof Edge){
+                Edge edge=(Edge)o;
+                edge.renderSelection(renderer);
+            }
+        }
         for (int i = 0; i < nodes.size(); i++) {
             Node node = nodes.get(i);
             renderer.begin(ShapeRenderer.ShapeType.Line);
             ColorUtil.setRendererColor(renderer, node.getColor());
             Vector2 pos = node.getBody().getPosition();
+            gl.glLineWidth(10);
             renderer.circle(pos.x,pos.y,node.getRadius(),64);
             renderer.end();
         }
-        for (int i = 0; i < edges.size(); i++) {
-            Edge edge = edges.get(i);
-            renderer.begin(ShapeRenderer.ShapeType.Line);
-            ColorUtil.setRendererColor(renderer, edge.color());
-            Vector2 pos1 = edge.node1().getBody().getPosition();
-            Vector2 pos2 = edge.node2().getBody().getPosition();
-            Vector2 dir = new Vector2(pos2).sub(pos1).setLength(1f);
-            Vector2 start = new Vector2(pos1).add(new Vector2(dir).scl(edge.node1().getRadius()));
-            Vector2 end = new Vector2(pos2).add(new Vector2(dir).scl(-edge.node2().getRadius()));
-            renderer.line(start,end);
-            renderer.end();
+        for (Edge edge : edges) {
+            edge.render(renderer);
         }
-        for(int i=0; i<pulls.size();i++){
-            Pull pull =pulls.get(i);
+        for(int i = 0; i< slides.size(); i++){
+            Slide slide = slides.get(i);
             renderer.begin(ShapeRenderer.ShapeType.Filled);
             renderer.setColor(.5f,.5f,1f,.5f);
-            Vector2 pos = pull.body.getPosition();
+            Vector2 pos = slide.body.getPosition();
             renderer.circle(pos.x,pos.y,1,64);
             renderer.end();
         }
@@ -271,9 +279,9 @@ public class Mech extends ApplicationAdapter implements InputProcessor, MenuCons
     }
 
     private Integer findPull(Vector2 mousePos) {
-        for(int i=0; i<pulls.size();i++) {
-            Pull pull = pulls.get(i);
-            Vector2 pos = pull.body.getPosition();
+        for(int i = 0; i< slides.size(); i++) {
+            Slide slide = slides.get(i);
+            Vector2 pos = slide.body.getPosition();
             float dist = pos.dst(mousePos);
             if(dist<1){
                 return i;
@@ -294,6 +302,15 @@ public class Mech extends ApplicationAdapter implements InputProcessor, MenuCons
         return null;
     }
 
+    private Edge findEdge(Vector2 mousePos){
+        for (Edge edge : edges) {
+            if(edge.hitTest(mousePos)){
+                return edge;
+            }
+        }
+        return null;
+    }
+
     @Override
     public boolean touchDown(int screenX, int screenY, int pointer, int button) {
         if(_toolBar.touchDown(screenX,screenY, pointer, button)){
@@ -301,21 +318,31 @@ public class Mech extends ApplicationAdapter implements InputProcessor, MenuCons
         }
         Vector3 mousePos3 = cam.unproject(new Vector3(screenX,screenY,0));
         Vector2 mousePos = new Vector2(mousePos3.x,mousePos3.y);
+        Edge edge=findEdge(mousePos);
+        if(edge!=null){
+            if(_selection.contains(edge)){
+                _selection.remove(edge);
+            }else {
+                _selection.add(edge);
+            }
+            onSelectionChanged();
+            return true;
+        }
         Integer pull_=findPull(mousePos);
         if(pull_!=null){
-            Pull pull=pulls.get(pull_);
+            Slide slide = slides.get(pull_);
             MouseJointDef defJoint = new MouseJointDef();
-            defJoint.maxForce=10000000*pull.body.getMass();
+            defJoint.maxForce=10000000* slide.body.getMass();
             //defJoint.dampingRatio=1;
             //defJoint.frequencyHz=1000f;
-            defJoint.bodyA=pull.homeBody;
-            defJoint.bodyB=pull.body;
+            defJoint.bodyA= slide.homeBody;
+            defJoint.bodyB= slide.body;
             defJoint.target.set(mousePos.x,mousePos.y);
             Drag drag = new Drag();
             drag.mouseJoint = (MouseJoint) pullWorld.createJoint(defJoint);
             drag.pull=pull_;
             drags.put(pointer,drag);
-            pullWorld.destroyJoint(pull.pullBackJoint);
+            pullWorld.destroyJoint(slide.pullBackJoint);
             return true;
         }
         if(_properties.tool==Tool.NODE){
@@ -339,6 +366,10 @@ public class Mech extends ApplicationAdapter implements InputProcessor, MenuCons
                 _drawEdgeNode=node;
             }
         }
+        if(_properties.tool==Tool.SLIDE){
+            Slide slide =createSlide(mousePos.x,mousePos.y);
+            slides.add(slide);
+        }
         return false;
     }
     private void onSelectionChanged(){
@@ -360,11 +391,11 @@ public class Mech extends ApplicationAdapter implements InputProcessor, MenuCons
             Drag drag = drags.get(pointer);
             pullWorld.destroyJoint(drag.mouseJoint);
             drags.remove(pointer);
-            createPullBackJoint(pulls.get(drag.pull));
+            createPullBackJoint(slides.get(drag.pull));
         }
         if(_properties.tool==Tool.EDGE && _drawEdgeNode!=null){
             Node node = findNode(mousePos);
-            if(node!=null){
+            if(node!=null && node!=_drawEdgeNode){
                 edges.add(new Edge(world, _drawEdgeNode, node, Color.YELLOW));
                 _drawEdgeNode=null;
             }

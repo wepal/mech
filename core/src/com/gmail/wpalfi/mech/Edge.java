@@ -1,7 +1,12 @@
 package com.gmail.wpalfi.mech;
 
+import com.badlogic.gdx.Gdx;
+import com.badlogic.gdx.graphics.GL20;
+import com.badlogic.gdx.graphics.g3d.particles.influencers.DynamicsModifier;
+import com.badlogic.gdx.graphics.glutils.ShapeRenderer;
 import com.badlogic.gdx.math.MathUtils;
 import com.badlogic.gdx.math.Matrix3;
+import com.badlogic.gdx.math.Rectangle;
 import com.badlogic.gdx.math.Vector2;
 import com.badlogic.gdx.physics.box2d.BodyDef;
 import com.badlogic.gdx.physics.box2d.Fixture;
@@ -17,6 +22,20 @@ import com.badlogic.gdx.physics.box2d.joints.RevoluteJoint;
 import com.badlogic.gdx.physics.box2d.joints.RevoluteJointDef;
 
 public class Edge{
+    private World _world;
+    private Node _node1,_node2;
+    private float _restLength;
+    private float _strength = 1;
+    private Color _color;
+    private DistanceJoint _distanceJoint;
+    private Body _body1, _body2;
+    private Fixture _fixture1, _fixture2;
+    private RevoluteJoint _revoluteJoint1, _revoluteJoint2;
+    private PrismaticJoint _prismaticJoint;
+    private float _lastUpdateDist;
+    private Vector2 pos1,pos2,dir,start,end;
+
+
     public Edge(World world, Node node1, Node node2, Color color){
         _world=world;
         _node1=node1;
@@ -68,9 +87,13 @@ public class Edge{
     }
 
     public void update(){
-        Vector2 p1 = node1().getBody().getPosition();
-        Vector2 p2 = node2().getBody().getPosition();
-        float dist = p1.dst(p2);
+        pos1 = _node1.getBody().getPosition();
+        pos2 = _node2.getBody().getPosition();
+        dir = new Vector2(pos2).sub(pos1).setLength(1f);
+        start = new Vector2(pos1).add(new Vector2(dir).scl(_node1.getRadius()));
+        end = new Vector2(pos2).add(new Vector2(dir).scl(-_node2.getRadius()));
+
+        float dist = pos1.dst(pos2);
         if(Math.abs((dist-_lastUpdateDist)/_lastUpdateDist)<.1){
             return;
         }
@@ -128,16 +151,27 @@ public class Edge{
     public void setColor(Color color){
         _color=color;
     }
-
-    private World _world;
-    private Node _node1,_node2;
-    private float _restLength;
-    private float _strength = 1;
-    private Color _color;
-    private DistanceJoint _distanceJoint;
-    private Body _body1, _body2;
-    private Fixture _fixture1, _fixture2;
-    private RevoluteJoint _revoluteJoint1, _revoluteJoint2;
-    private PrismaticJoint _prismaticJoint;
-    private float _lastUpdateDist;
+    public boolean hitTest(Vector2 pos){
+        Vector2 d = new Vector2(pos).sub(start);
+        float x = d.dot(dir);
+        float y = new Vector2(d).sub(new Vector2(dir).scl(x)).len();
+        float len = start.dst(end);
+        return x>0 && x<len && y>-.1 && y<.1;
+    }
+    public void render(ShapeRenderer renderer){
+        GL20 gl = Gdx.gl;
+        renderer.begin(ShapeRenderer.ShapeType.Line);
+        ColorUtil.setRendererColor(renderer, _color);
+        gl.glLineWidth(8);
+        renderer.line(start,end);
+        renderer.end();
+    }
+    public void renderSelection(ShapeRenderer renderer){
+        GL20 gl = Gdx.gl;
+        renderer.begin(ShapeRenderer.ShapeType.Line);
+        renderer.setColor(1,0,0,1);
+        gl.glLineWidth(10);
+        renderer.line(start,end);
+        renderer.end();
+    }
 }
