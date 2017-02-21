@@ -25,19 +25,20 @@ import java.util.List;
 import java.util.ArrayList;
 import java.util.HashMap;
 
-public class Mech extends ApplicationAdapter implements InputProcessor, MenuConsumer {
+public class Mech extends ApplicationAdapter implements InputProcessor, MenuConsumer, Slider.Listener {
     List<Node> nodes = new ArrayList<Node>();;
     List<Edge> edges = new ArrayList<Edge>();
     List<Slide> slides = new ArrayList<Slide>();
     World world, pullWorld;
     OrthographicCamera cam;
     ShapeRenderer renderer;
-    HashMap<Integer,Drag> drags=new HashMap<Integer, Drag>();
+    HashMap<Integer,Slide> drags=new HashMap<Integer, Slide>();
     Node _drawEdgeNode;
     Box2DDebugRenderer _debugRenderer;
     Properties _properties=new Properties();
     List<Object> _selection=new ArrayList<Object>();
     ToolBar _toolBar;
+    Slider _dragSlider;
 
     @Override
     public Properties getProperties(){
@@ -100,88 +101,21 @@ public class Mech extends ApplicationAdapter implements InputProcessor, MenuCons
         edges.add(new Edge(world, nodes.get(0),nodes.get(2),Color.YELLOW));
         edges.add(new Edge(world, nodes.get(1),nodes.get(2),Color.YELLOW));
 
-        Slide slide =createSlide(9,3);
-        Drive drive=new Drive();
-        drive.edge=1;
-        drive.length=9;
-        slide.drives.add(drive);
+        Slide slide = new Slide(pullWorld,new Vector2(10,5),new Vector2(12,7),.33f);
         slides.add(slide);
 
-        slide =createSlide(9,6);
-        drive=new Drive();
-        drive.edge=2;
-        drive.length=9;
-        slide.drives.add(drive);
-        slides.add(slide);
+        Drive drive=new Drive();
+        drive.slide=slide;
+        drive.length=1.5f;
+        edges.get(1).addDrive(drive);
 
         _toolBar=new ToolBar(this);
     }
 
-    private Slide createSlide(float x, float y) {
-        Slide slide =new Slide();
-        slide.homeX=x;
-        slide.homeY=y;
-
-        CircleShape sd = new CircleShape();
-        sd.setRadius(1);
-
-        FixtureDef fdef = new FixtureDef();
-        fdef.shape = sd;
-        fdef.density = 1.0f;
-        fdef.friction = 0.3f;
-        fdef.restitution = 0.6f;
-
-        BodyDef bd = new BodyDef();
-        // bd.isBullet = true;
-        bd.linearDamping = 1f;
-        bd.fixedRotation = true;
-        bd.allowSleep = true;
-        bd.position.set(x, y);
-        Body body = pullWorld.createBody(bd);
-        body.createFixture(fdef);
-        body.setType(BodyDef.BodyType.DynamicBody);
-        slide.body = body;
-
-        BodyDef homeBodyDef = new BodyDef();
-        homeBodyDef.allowSleep = true;
-        homeBodyDef.position.set(x, y);
-        Body homeBody = pullWorld.createBody(homeBodyDef );
-        homeBody.setType(BodyDef.BodyType.StaticBody);
-        slide.homeBody=homeBody;
-
-        PrismaticJointDef prismaticJointDef=new PrismaticJointDef();
-        prismaticJointDef.initialize(homeBody,body,homeBody.getPosition(),new Vector2(0,1));
-        slide.prismaticJoint=(PrismaticJoint)pullWorld.createJoint(prismaticJointDef);
-
-        createPullBackJoint(slide);
-
-        return slide;
-    }
-
-    private void createPullBackJoint(Slide slide){
-        DistanceJointDef pullBackJointDef = new DistanceJointDef();
-        pullBackJointDef.dampingRatio=3;
-        pullBackJointDef.frequencyHz=3;
-        pullBackJointDef.bodyA= slide.body;
-        pullBackJointDef.bodyB= slide.homeBody;
-        pullBackJointDef.length=0;
-        slide.pullBackJoint = (DistanceJoint)pullWorld.createJoint(pullBackJointDef);
-    }
 
     private void tick (float timeStep, int iters) {
         for(int i=0; i<edges.size();i++) {
             edges.get(i).update();
-        }
-        for(int i = 0; i< slides.size(); i++){
-            Slide slide = slides.get(i);
-            Vector2 pos = slide.body.getPosition();
-            float dist = pos.dst(slide.homeX, slide.homeY);
-            for(int j = 0; j< slide.drives.size(); j++) {
-                Drive drive = slide.drives.get(j);
-                Edge edge = edges.get(drive.edge);
-                float weight = Math.min(dist,1f);
-                edge.setLength(drive.length * weight + edge.getRestLength() * (1-weight));
-            }
         }
 
         float dt = timeStep / iters;
@@ -200,7 +134,8 @@ public class Mech extends ApplicationAdapter implements InputProcessor, MenuCons
             tick(Gdx.graphics.getDeltaTime(), 4);
         }
 
-        gl.glClearColor(108 / (float) 255, 96 / (float) 255, 15 / (float) 255, 1);
+        //gl.glClearColor(108 / (float) 255, 96 / (float) 255, 15 / (float) 255, 1);
+        gl.glClearColor(0,0,0, 1);
         gl.glClear(GL20.GL_COLOR_BUFFER_BIT);
 
         cam.viewportWidth = 20;
@@ -217,44 +152,38 @@ public class Mech extends ApplicationAdapter implements InputProcessor, MenuCons
         }
 
         _toolBar.render();
+        if(_dragSlider!=null){
+            _dragSlider.render();
+        }
     }
 
     private void renderNormal(){
-        GL20 gl = Gdx.gl;
         renderer.setProjectionMatrix(cam.combined);
-        for (Object o : _selection) {
-            if(o instanceof Node){
-                Node node=(Node)o;
-                renderer.begin(ShapeRenderer.ShapeType.Filled);
-                renderer.setColor(1,1,1,1);
-                Vector2 pos = node.getBody().getPosition();
-                renderer.circle(pos.x,pos.y,node.getRadius()+.2f,64);
-                renderer.end();
-            }
-            if(o instanceof Edge){
-                Edge edge=(Edge)o;
-                edge.renderSelection(renderer);
+        if(drags.isEmpty()){
+            for (Object o : _selection) {
+                if(o instanceof Node){
+                    Node node=(Node)o;
+                    node.renderSelection(renderer);
+                }
+                if(o instanceof Edge){
+                    Edge edge=(Edge)o;
+                    edge.renderSelection(renderer);
+                }
             }
         }
-        for (int i = 0; i < nodes.size(); i++) {
-            Node node = nodes.get(i);
-            renderer.begin(ShapeRenderer.ShapeType.Line);
-            ColorUtil.setRendererColor(renderer, node.getColor());
-            Vector2 pos = node.getBody().getPosition();
-            gl.glLineWidth(10);
-            renderer.circle(pos.x,pos.y,node.getRadius(),64);
-            renderer.end();
+        for (Edge edge : edges) {
+            if(edge.hasDrive(drags.values())){
+                edge.renderDrive(renderer, _selection.contains(edge));
+            }
         }
         for (Edge edge : edges) {
             edge.render(renderer);
         }
-        for(int i = 0; i< slides.size(); i++){
-            Slide slide = slides.get(i);
-            renderer.begin(ShapeRenderer.ShapeType.Filled);
-            renderer.setColor(.5f,.5f,1f,.5f);
-            Vector2 pos = slide.body.getPosition();
-            renderer.circle(pos.x,pos.y,1,64);
-            renderer.end();
+        for (Node node : nodes) {
+            node.render(renderer);
+        }
+        for (Slide slide : slides) {
+            slide.render(renderer);
         }
     }
 	
@@ -278,13 +207,11 @@ public class Mech extends ApplicationAdapter implements InputProcessor, MenuCons
         return false;
     }
 
-    private Integer findPull(Vector2 mousePos) {
-        for(int i = 0; i< slides.size(); i++) {
-            Slide slide = slides.get(i);
-            Vector2 pos = slide.body.getPosition();
-            float dist = pos.dst(mousePos);
-            if(dist<1){
-                return i;
+    private Slide findSlide(Vector2 mousePos) {
+        for (Slide slide : slides) {
+            float dist = slide.hitTest(mousePos);
+            if(dist<0){
+                return slide;
             }
         }
         return null;
@@ -316,48 +243,63 @@ public class Mech extends ApplicationAdapter implements InputProcessor, MenuCons
         if(_toolBar.touchDown(screenX,screenY, pointer, button)){
             return true;
         }
+        if(_dragSlider!=null){
+            if(_dragSlider.touchDown(screenX,screenY,pointer,button)){
+                return true;
+            }
+            _dragSlider=null;
+        }
         Vector3 mousePos3 = cam.unproject(new Vector3(screenX,screenY,0));
         Vector2 mousePos = new Vector2(mousePos3.x,mousePos3.y);
-        Edge edge=findEdge(mousePos);
-        if(edge!=null){
-            if(_selection.contains(edge)){
-                _selection.remove(edge);
-            }else {
-                _selection.add(edge);
+        {
+            Edge edge = findEdge(mousePos);
+            if (edge != null) {
+                if (_selection.contains(edge)) {
+                    _selection.remove(edge);
+                } else {
+                    _selection.add(edge);
+                    if(drags.size()==1){
+                        Slide slide = drags.values().iterator().next();
+                        Drive drive = edge.getDrive(slide);
+                        if(drive==null) {
+                            drive = new Drive();
+                            drive.slide = slide;
+                            drive.length = 1;
+                            edge.addDrive(drive);
+                        }
+                        if(_dragSlider==null) {
+                            _dragSlider = new Slider(drive.length,this);
+                        }
+                    }
+                }
+                onSelectionChanged();
+                return true;
             }
-            onSelectionChanged();
-            return true;
         }
-        Integer pull_=findPull(mousePos);
-        if(pull_!=null){
-            Slide slide = slides.get(pull_);
-            MouseJointDef defJoint = new MouseJointDef();
-            defJoint.maxForce=10000000* slide.body.getMass();
-            //defJoint.dampingRatio=1;
-            //defJoint.frequencyHz=1000f;
-            defJoint.bodyA= slide.homeBody;
-            defJoint.bodyB= slide.body;
-            defJoint.target.set(mousePos.x,mousePos.y);
-            Drag drag = new Drag();
-            drag.mouseJoint = (MouseJoint) pullWorld.createJoint(defJoint);
-            drag.pull=pull_;
-            drags.put(pointer,drag);
-            pullWorld.destroyJoint(slide.pullBackJoint);
-            return true;
-        }
-        if(_properties.tool==Tool.NODE){
+        if(_properties.tool!=Tool.EDGE){
             Node node = findNode(mousePos);
-            if(node!=null) {
-                if(_selection.contains(node)){
+            if (node != null) {
+                if (_selection.contains(node)) {
                     _selection.remove(node);
-                }else {
+                } else {
                     _selection.add(node);
                 }
                 onSelectionChanged();
-            }else{
-                node=new Node(world, mousePos.x,mousePos.y,_properties.radius,_properties.color);
-                nodes.add(node);
+                return true;
             }
+        }
+        {
+            Slide slide = findSlide(mousePos);
+            if (slide != null) {
+                slide.touchDown(mousePos);
+                drags.put(pointer, slide);
+                _selection.clear();
+                return true;
+            }
+        }
+        if(_properties.tool==Tool.NODE){
+            Node node=new Node(world, mousePos.x,mousePos.y,_properties.radius,_properties.color);
+            nodes.add(node);
             return true;
         }
         if(_properties.tool==Tool.EDGE){
@@ -367,7 +309,7 @@ public class Mech extends ApplicationAdapter implements InputProcessor, MenuCons
             }
         }
         if(_properties.tool==Tool.SLIDE){
-            Slide slide =createSlide(mousePos.x,mousePos.y);
+            Slide slide = new Slide(pullWorld, new Vector2(mousePos).add(0,1), new Vector2(mousePos).add(0,-1),.5f);
             slides.add(slide);
         }
         return false;
@@ -385,13 +327,17 @@ public class Mech extends ApplicationAdapter implements InputProcessor, MenuCons
         if(_toolBar.touchUp(screenX,screenY, pointer, button)){
             return true;
         }
+        if(_dragSlider!=null){
+            if(_dragSlider.touchUp(screenX,screenY,pointer,button)){
+                return true;
+            }
+        }
         Vector3 mousePos3 = cam.unproject(new Vector3(screenX,screenY,0));
         Vector2 mousePos = new Vector2(mousePos3.x,mousePos3.y);
         if(drags.containsKey(pointer)) {
-            Drag drag = drags.get(pointer);
-            pullWorld.destroyJoint(drag.mouseJoint);
+            Slide slide = drags.get(pointer);
+            slide.touchUp(mousePos);
             drags.remove(pointer);
-            createPullBackJoint(slides.get(drag.pull));
         }
         if(_properties.tool==Tool.EDGE && _drawEdgeNode!=null){
             Node node = findNode(mousePos);
@@ -405,14 +351,20 @@ public class Mech extends ApplicationAdapter implements InputProcessor, MenuCons
 
     @Override
     public boolean touchDragged(int screenX, int screenY, int pointer) {
+        Vector3 mousePos3 = cam.unproject(new Vector3(screenX,screenY,0));
+        Vector2 mousePos = new Vector2(mousePos3.x,mousePos3.y);
         if(_toolBar.touchDragged(screenX,screenY, pointer)){
             return true;
         }
+        if(_dragSlider!=null){
+            if(_dragSlider.touchDragged(screenX,screenY,pointer)){
+                return true;
+            }
+        }
         if(drags.containsKey(pointer)){
-            Vector3 mousePos3 = cam.unproject(new Vector3(screenX,screenY,0));
-            Vector2 mousePos = new Vector2(mousePos3.x,mousePos3.y);
-            Drag drag = drags.get(pointer);
-            drag.mouseJoint.setTarget(mousePos);
+            Slide slide = drags.get(pointer);
+            slide.touchDragged(mousePos);
+            return true;
         }
         return true;
     }
@@ -427,4 +379,19 @@ public class Mech extends ApplicationAdapter implements InputProcessor, MenuCons
         return false;
     }
 
+    @Override
+    public void onSliderValueChanged(float value) {
+        if(drags.size()!=1){
+            _dragSlider=null;
+            return;
+        }
+        Slide slide = drags.values().iterator().next();
+        for (Object o : _selection) {
+            if(o instanceof Edge){
+                Edge edge=(Edge)o;
+                Drive drive = edge.getDrive(slide);
+                drive.length=value;
+            }
+        }
+    }
 }

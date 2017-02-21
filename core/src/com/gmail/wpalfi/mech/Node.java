@@ -1,5 +1,7 @@
 package com.gmail.wpalfi.mech;
 
+import com.badlogic.gdx.graphics.glutils.ShapeRenderer;
+import com.badlogic.gdx.math.Vector2;
 import com.badlogic.gdx.physics.box2d.Body;
 import com.badlogic.gdx.physics.box2d.BodyDef;
 import com.badlogic.gdx.physics.box2d.CircleShape;
@@ -70,6 +72,22 @@ public class Node {
     }
     Color getColor(){
         return _color;
+    }
+
+    public void render(ShapeRenderer renderer) {
+        renderer.begin(ShapeRenderer.ShapeType.Line);
+        ColorUtil.setRendererColor(renderer, _color);
+        Vector2 pos = _body.getPosition();
+        renderer.circle(pos.x,pos.y,_radius,64);
+        renderer.end();
+    }
+
+    public void renderSelection(ShapeRenderer renderer) {
+        renderer.begin(ShapeRenderer.ShapeType.Filled);
+        renderer.setColor(.2f,.2f,.2f,1);
+        Vector2 pos = _body.getPosition();
+        renderer.circle(pos.x,pos.y,_radius+.6f,64);
+        renderer.end();
     }
 }
 

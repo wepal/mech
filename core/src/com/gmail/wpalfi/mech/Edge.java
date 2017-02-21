@@ -2,11 +2,8 @@ package com.gmail.wpalfi.mech;
 
 import com.badlogic.gdx.Gdx;
 import com.badlogic.gdx.graphics.GL20;
-import com.badlogic.gdx.graphics.g3d.particles.influencers.DynamicsModifier;
 import com.badlogic.gdx.graphics.glutils.ShapeRenderer;
 import com.badlogic.gdx.math.MathUtils;
-import com.badlogic.gdx.math.Matrix3;
-import com.badlogic.gdx.math.Rectangle;
 import com.badlogic.gdx.math.Vector2;
 import com.badlogic.gdx.physics.box2d.BodyDef;
 import com.badlogic.gdx.physics.box2d.Fixture;
@@ -21,6 +18,10 @@ import com.badlogic.gdx.physics.box2d.joints.PrismaticJointDef;
 import com.badlogic.gdx.physics.box2d.joints.RevoluteJoint;
 import com.badlogic.gdx.physics.box2d.joints.RevoluteJointDef;
 
+import java.util.ArrayList;
+import java.util.Collection;
+import java.util.List;
+
 public class Edge{
     private World _world;
     private Node _node1,_node2;
@@ -32,9 +33,11 @@ public class Edge{
     private Fixture _fixture1, _fixture2;
     private RevoluteJoint _revoluteJoint1, _revoluteJoint2;
     private PrismaticJoint _prismaticJoint;
-    private float _lastUpdateDist;
+    private float _lastUpdateLength;
+    private List<Drive> _drives=new ArrayList<Drive>();
+    //cached
     private Vector2 pos1,pos2,dir,start,end;
-
+    private float _length;
 
     public Edge(World world, Node node1, Node node2, Color color){
         _world=world;
@@ -86,22 +89,26 @@ public class Edge{
         update();
     }
 
-    public void update(){
-        pos1 = _node1.getBody().getPosition();
-        pos2 = _node2.getBody().getPosition();
-        dir = new Vector2(pos2).sub(pos1).setLength(1f);
-        start = new Vector2(pos1).add(new Vector2(dir).scl(_node1.getRadius()));
-        end = new Vector2(pos2).add(new Vector2(dir).scl(-_node2.getRadius()));
-
-        float dist = pos1.dst(pos2);
-        if(Math.abs((dist-_lastUpdateDist)/_lastUpdateDist)<.1){
+    private void updateLength(){
+        if(_drives.isEmpty()){
             return;
         }
+        float lengthSum=0;
+        for (Drive drive : _drives) {
+            float pos = drive.slide.getPosition();
+            float length = drive.length * pos * _restLength;
+            lengthSum += length;
+        }
+        float meanLength = lengthSum/_drives.size();
+        _distanceJoint.setLength(meanLength);
+    }
+
+    private void updateFixtures(){
         if(_fixture1!=null){
             _body1.destroyFixture(_fixture1);
             _body2.destroyFixture(_fixture2);
         }
-        float w=dist*.75f;
+        float w=_length*.75f;
         Vector2[] vertices=new Vector2[4];
         vertices[0]=new Vector2(0,-.1f);
         vertices[1]=new Vector2(0,+.1f);
@@ -131,10 +138,22 @@ public class Edge{
         fdef1.filter.maskBits = 0x0001;
         _fixture2 = _body2.createFixture(fdef2);
 
-        _lastUpdateDist = dist;
+        _lastUpdateLength = _length;
     }
-    public void setLength(float length){
-        _distanceJoint.setLength(length);
+
+    public void update(){
+        pos1 = _node1.getBody().getPosition();
+        pos2 = _node2.getBody().getPosition();
+        dir = new Vector2(pos2).sub(pos1).setLength(1f);
+        start = new Vector2(pos1).add(new Vector2(dir).scl(_node1.getRadius()));
+        end = new Vector2(pos2).add(new Vector2(dir).scl(-_node2.getRadius()));
+        _length = pos1.dst(pos2);
+
+        if(Math.abs((_length- _lastUpdateLength)/ _lastUpdateLength)>.1){
+            updateFixtures();
+        }
+
+        updateLength();
     }
     public float getRestLength(){
         return _restLength;
@@ -159,19 +178,54 @@ public class Edge{
         return x>0 && x<len && y>-.1 && y<.1;
     }
     public void render(ShapeRenderer renderer){
-        GL20 gl = Gdx.gl;
-        renderer.begin(ShapeRenderer.ShapeType.Line);
+        renderer.begin(ShapeRenderer.ShapeType.Filled);
         ColorUtil.setRendererColor(renderer, _color);
-        gl.glLineWidth(8);
-        renderer.line(start,end);
+        renderer.rectLine(start,end,.1f);
         renderer.end();
     }
     public void renderSelection(ShapeRenderer renderer){
-        GL20 gl = Gdx.gl;
-        renderer.begin(ShapeRenderer.ShapeType.Line);
-        renderer.setColor(1,0,0,1);
-        gl.glLineWidth(10);
-        renderer.line(start,end);
+        renderer.begin(ShapeRenderer.ShapeType.Filled);
+        renderer.setColor(.2f,.2f,.2f,1);
+        renderer.rectLine(start,end,1f);
         renderer.end();
+    }
+    public void renderDrive(ShapeRenderer renderer, boolean selected) {
+        renderer.begin(ShapeRenderer.ShapeType.Filled);
+        if(selected){
+            renderer.setColor(.4f,.4f,1,1);
+        }else{
+            renderer.setColor(.1f,.1f,.5f,1);
+        }
+        renderer.rectLine(start,end,1f);
+        renderer.end();
+    }
+    //TODO: remove?
+    public void addDrive(Drive drive) {
+        _drives.add(drive);
+    }
+
+    public boolean hasDrive(Slide slide) {
+        for (Drive drive : _drives) {
+            if(drive.slide==slide){
+                return true;
+            }
+        }
+        return false;
+    }
+    public boolean hasDrive(Iterable<Slide> slides) {
+        for (Slide slide : slides) {
+            if (hasDrive(slide)) {
+                return true;
+            }
+        }
+        return false;
+    }
+    public Drive getDrive(Slide slide) {
+        for (Drive drive : _drives) {
+            if(drive.slide==slide){
+                return drive;
+            }
+        }
+        return null;
     }
 }

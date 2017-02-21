@@ -5,6 +5,6 @@ package com.gmail.wpalfi.mech;
  */
 
 public class Drive {
-    int edge;
-    float length;
+    Slide slide;
+    float length; //relative, 1==no change
 }
