@@ -20,6 +20,7 @@ import com.badlogic.gdx.physics.box2d.joints.MouseJoint;
 import com.badlogic.gdx.physics.box2d.joints.MouseJointDef;
 import com.badlogic.gdx.physics.box2d.joints.PrismaticJoint;
 import com.badlogic.gdx.physics.box2d.joints.PrismaticJointDef;
+import com.badlogic.gdx.scenes.scene2d.utils.*;
 import com.badlogic.gdx.utils.TimeUtils;
 import java.util.List;
 import java.util.ArrayList;
@@ -32,11 +33,11 @@ public class Mech extends ApplicationAdapter implements InputProcessor, MenuCons
     World world, pullWorld;
     OrthographicCamera cam;
     ShapeRenderer renderer;
-    HashMap<Integer,Slide> drags=new HashMap<Integer, Slide>();
-    Node _drawEdgeNode;
+    HashMap<Integer,Drag> drags=new HashMap<Integer, Drag>();
     Box2DDebugRenderer _debugRenderer;
     Properties _properties=new Properties();
     List<Object> _selection=new ArrayList<Object>();
+    boolean _selectMulti=false;
     ToolBar _toolBar;
     Slider _dragSlider;
 
@@ -110,6 +111,11 @@ public class Mech extends ApplicationAdapter implements InputProcessor, MenuCons
         edges.get(1).addDrive(drive);
 
         _toolBar=new ToolBar(this);
+
+        cam.viewportWidth = 20;
+        cam.viewportHeight = cam.viewportWidth * Gdx.graphics.getHeight() / Gdx.graphics.getWidth();
+        cam.position.set(cam.viewportWidth / 2, cam.viewportHeight / 2, 0);
+        cam.update();
     }
 
 
@@ -137,11 +143,6 @@ public class Mech extends ApplicationAdapter implements InputProcessor, MenuCons
         //gl.glClearColor(108 / (float) 255, 96 / (float) 255, 15 / (float) 255, 1);
         gl.glClearColor(0,0,0, 1);
         gl.glClear(GL20.GL_COLOR_BUFFER_BIT);
-
-        cam.viewportWidth = 20;
-        cam.viewportHeight = cam.viewportWidth * Gdx.graphics.getHeight() / Gdx.graphics.getWidth();
-        cam.position.set(cam.viewportWidth / 2, cam.viewportHeight / 2, 0);
-        cam.update();
 
         if(_properties.useDebugRenderer){
             _debugRenderer.render(world,cam.combined);
@@ -172,7 +173,16 @@ public class Mech extends ApplicationAdapter implements InputProcessor, MenuCons
             }
         }
         for (Edge edge : edges) {
-            if(edge.hasDrive(drags.values())){
+            boolean hasDrive =false;
+            for (Drag drag: drags.values()) {
+                if(drag.startDrawable instanceof Slide){
+                    Slide slide=(Slide)drag.startDrawable;
+                    if(edge.hasDrive(slide)){
+                        hasDrive=true;
+                    }
+                }
+            }
+            if(hasDrive){
                 edge.renderDrive(renderer, _selection.contains(edge));
             }
         }
@@ -207,112 +217,67 @@ public class Mech extends ApplicationAdapter implements InputProcessor, MenuCons
         return false;
     }
 
-    private Slide findSlide(Vector2 mousePos) {
-        for (Slide slide : slides) {
-            float dist = slide.hitTest(mousePos);
-            if(dist<0){
-                return slide;
-            }
+    private Drawable hitTest(Vector2 mousePos) {
+        HitTestResult hitTestResult = hitTest(null, edges, mousePos);
+        hitTestResult = hitTest(hitTestResult ,nodes, mousePos);
+        hitTestResult = hitTest(hitTestResult ,slides, mousePos);
+        if(hitTestResult==null) {
+            return null;
         }
-        return null;
+        float maxDist = screenCmToWorldDist(.2f);
+        if(hitTestResult.dist>maxDist) {
+            return null;
+        }
+        return hitTestResult.drawable;
     }
 
-    private Node findNode(Vector2 mousePos) {
-        for(int i=0; i<nodes.size();i++) {
-            Node node = nodes.get(i);
-            Vector2 pos = node.getBody().getPosition();
-            float dist = pos.dst(mousePos);
-            if(dist<node.getRadius()){
-                return node;
-            }
-        }
-        return null;
+    private class HitTestResult {
+        Drawable drawable;
+        float dist;
     }
 
-    private Edge findEdge(Vector2 mousePos){
-        for (Edge edge : edges) {
-            if(edge.hitTest(mousePos)){
-                return edge;
+    private HitTestResult hitTest(HitTestResult hitTestResult ,List<? extends Drawable> drawables, Vector2 mousePos) {
+        for (Drawable drawable : drawables) {
+            float dist = drawable.hitTest(mousePos);
+            if(hitTestResult==null) {
+                hitTestResult = new HitTestResult();
+            }else if(dist>hitTestResult.dist) {
+                continue;
             }
+            hitTestResult.dist=dist;
+            hitTestResult.drawable=drawable;
         }
-        return null;
+        return hitTestResult;
     }
+
+
 
     @Override
     public boolean touchDown(int screenX, int screenY, int pointer, int button) {
-        if(_toolBar.touchDown(screenX,screenY, pointer, button)){
+        if (_toolBar.touchDown(screenX, screenY, pointer, button)) {
             return true;
         }
-        if(_dragSlider!=null){
-            if(_dragSlider.touchDown(screenX,screenY,pointer,button)){
+        if (_dragSlider != null) {
+            if (_dragSlider.touchDown(screenX, screenY, pointer, button)) {
                 return true;
             }
-            _dragSlider=null;
+            _dragSlider = null;
         }
-        Vector3 mousePos3 = cam.unproject(new Vector3(screenX,screenY,0));
-        Vector2 mousePos = new Vector2(mousePos3.x,mousePos3.y);
-        {
-            Edge edge = findEdge(mousePos);
-            if (edge != null) {
-                if (_selection.contains(edge)) {
-                    _selection.remove(edge);
-                } else {
-                    _selection.add(edge);
-                    if(drags.size()==1){
-                        Slide slide = drags.values().iterator().next();
-                        Drive drive = edge.getDrive(slide);
-                        if(drive==null) {
-                            drive = new Drive();
-                            drive.slide = slide;
-                            drive.length = 1;
-                            edge.addDrive(drive);
-                        }
-                        if(_dragSlider==null) {
-                            _dragSlider = new Slider(drive.length,this);
-                        }
-                    }
-                }
-                onSelectionChanged();
-                return true;
-            }
+        Vector3 mousePos3 = cam.unproject(new Vector3(screenX, screenY, 0));
+        Vector2 mousePos = new Vector2(mousePos3.x, mousePos3.y);
+        Drag drag = new Drag();
+        drag.startScreenPix = new Vector2(screenX,screenY);
+        drag.startCamPosition = new Vector3(cam.position);
+        drag.start = mousePos;
+        drag.startDrawable=hitTest(mousePos);
+        if(drag.startDrawable instanceof Slide) {
+            Slide slide=(Slide)drag.startDrawable;
+            slide.touchDown(mousePos);
+            _selection.clear();
+            onSelectionChanged();
         }
-        if(_properties.tool!=Tool.EDGE){
-            Node node = findNode(mousePos);
-            if (node != null) {
-                if (_selection.contains(node)) {
-                    _selection.remove(node);
-                } else {
-                    _selection.add(node);
-                }
-                onSelectionChanged();
-                return true;
-            }
-        }
-        {
-            Slide slide = findSlide(mousePos);
-            if (slide != null) {
-                slide.touchDown(mousePos);
-                drags.put(pointer, slide);
-                _selection.clear();
-                return true;
-            }
-        }
-        if(_properties.tool==Tool.NODE){
-            Node node=new Node(world, mousePos.x,mousePos.y,_properties.radius,_properties.color);
-            nodes.add(node);
-            return true;
-        }
-        if(_properties.tool==Tool.EDGE){
-            Node node = findNode(mousePos);
-            if(node!=null){
-                _drawEdgeNode=node;
-            }
-        }
-        if(_properties.tool==Tool.SLIDE){
-            Slide slide = new Slide(pullWorld, new Vector2(mousePos).add(0,1), new Vector2(mousePos).add(0,-1),.5f);
-            slides.add(slide);
-        }
-        return false;
+        drags.put(pointer, drag);
+        return true;
     }
     private void onSelectionChanged(){
         for (Object o : _selection) {
@@ -334,19 +299,94 @@ public class Mech extends ApplicationAdapter implements InputProcessor, MenuCons
         }
         Vector3 mousePos3 = cam.unproject(new Vector3(screenX,screenY,0));
         Vector2 mousePos = new Vector2(mousePos3.x,mousePos3.y);
-        if(drags.containsKey(pointer)) {
-            Slide slide = drags.get(pointer);
-            slide.touchUp(mousePos);
-            drags.remove(pointer);
+        if(!drags.containsKey(pointer)) {
+            return true;
         }
-        if(_properties.tool==Tool.EDGE && _drawEdgeNode!=null){
-            Node node = findNode(mousePos);
-            if(node!=null && node!=_drawEdgeNode){
-                edges.add(new Edge(world, _drawEdgeNode, node, Color.YELLOW));
-                _drawEdgeNode=null;
+        Drag drag=drags.get(pointer);
+        drag.end=mousePos;
+        drag.endDrawable=hitTest(mousePos);
+        dragEnd(drag);
+        drags.remove(pointer);
+        return true;
+    }
+
+    private void dragEnd(Drag drag) {
+        if(drag.startDrawable instanceof Slide){
+            Slide slide = (Slide)drag.startDrawable;
+            slide.touchUp(drag.end);
+            return;
+        }
+        if(_properties.tool==Tool.EDGE
+                && drag.startDrawable instanceof Node
+                && drag.endDrawable instanceof Node) {
+            Node start =(Node)drag.startDrawable;
+            Node end=(Node)drag.endDrawable;
+            edges.add(new Edge(world, start, end, _properties.color));
+            return;
+        }
+        //tap
+        if(draw(drag)){
+            return;
+        }
+        if(drag.startDrawable==null) {
+            _selection.clear();
+            onSelectionChanged();
+            return;
+        }
+        if(!_selectMulti) {
+            _selection.clear();
+        }
+        _selection.add(drag.startDrawable);
+        onSelectionChanged();
+
+        if(drag.startDrawable instanceof  Edge && drags.size()==2){
+            Edge edge=(Edge)drag.startDrawable;
+            Slide slide=null;
+            Drag drag1 = (Drag)drags.values().toArray()[0];
+            Drag drag2 = (Drag)drags.values().toArray()[1];
+            if(drag1.startDrawable instanceof Slide)
+                slide=(Slide)drag1.startDrawable;
+            if(drag2.startDrawable instanceof Slide)
+                slide=(Slide)drag2.startDrawable;
+            if(slide!=null) {
+                Drive drive = edge.getDrive(slide);
+                if (drive == null) {
+                    drive = new Drive();
+                    drive.slide = slide;
+                    drive.length = 1;
+                    edge.addDrive(drive);
+                }
+                if (_dragSlider == null) {
+                    _dragSlider = new Slider(drive.length, this);
+                }
             }
         }
-        return true;
+    }
+    private float screenCmToWorldDist(float screenDistCm){
+        float pixPerWorldMeter = Gdx.graphics.getWidth() / cam.viewportWidth;
+        float pixPerScreenCm = Gdx.graphics.getPpcX();
+        return screenDistCm * pixPerScreenCm / pixPerWorldMeter;
+    }
+    private boolean draw(Drag drag){
+        if(drag.startDrawable!=null){
+            return false;
+        }
+        float maxDist = screenCmToWorldDist(.2f);
+        float dist = drag.end.dst(drag.start);
+        if(dist>maxDist){
+            return false;
+        }
+        if(_properties.tool==Tool.NODE){
+            Node node=new Node(world, drag.end.x,drag.end.y,_properties.radius,_properties.color);
+            nodes.add(node);
+            return true;
+        }
+        if(_properties.tool==Tool.SLIDE){
+            Slide slide = new Slide(pullWorld, new Vector2(drag.end).add(0,1), new Vector2(drag.end).add(0,-1),.5f);
+            slides.add(slide);
+            return true;
+        }
+        return false;
     }
 
     @Override
@@ -362,9 +402,30 @@ public class Mech extends ApplicationAdapter implements InputProcessor, MenuCons
             }
         }
         if(drags.containsKey(pointer)){
-            Slide slide = drags.get(pointer);
-            slide.touchDragged(mousePos);
-            return true;
+            Drag drag = drags.get(pointer);
+            if(drag.startDrawable instanceof Slide){
+                Slide slide = (Slide)drag.startDrawable;
+                slide.touchDragged(mousePos);
+                return true;
+            }
+            if(drag.startDrawable==null && drags.size()==1){
+                Vector2 movePix = new Vector2(screenX,screenY).sub(drag.startScreenPix);
+                float pixPerWorldMeter = Gdx.graphics.getWidth() / cam.viewportWidth;
+                Vector2 moveWorld = new Vector2(movePix).scl(1/pixPerWorldMeter);
+                cam.position.x = drag.startCamPosition.x - moveWorld.x;
+                cam.position.y = drag.startCamPosition.y + moveWorld.y;
+                cam.update();
+            }
+        }
+        return true;
+    }
+
+    private boolean isZoomGesture(){
+        if(drags.size()!=2){
+            return false;
+        }
+        for(Drag drag: drags.values()){
+            if(drag.startDrawable!=null);
         }
         return true;
     }
@@ -381,16 +442,16 @@ public class Mech extends ApplicationAdapter implements InputProcessor, MenuCons
 
     @Override
     public void onSliderValueChanged(float value) {
-        if(drags.size()!=1){
-            _dragSlider=null;
-            return;
-        }
-        Slide slide = drags.values().iterator().next();
-        for (Object o : _selection) {
-            if(o instanceof Edge){
-                Edge edge=(Edge)o;
-                Drive drive = edge.getDrive(slide);
-                drive.length=value;
+        for(Drag drag:drags.values()) {
+            if(drag.startDrawable instanceof Slide) {
+                Slide slide=(Slide)drag.startDrawable;
+                for (Object o : _selection) {
+                    if(o instanceof Edge){
+                        Edge edge=(Edge)o;
+                        Drive drive = edge.getDrive(slide);
+                        drive.length=value;
+                    }
+                }
             }
         }
     }

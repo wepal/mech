@@ -22,7 +22,7 @@ import java.util.ArrayList;
 import java.util.Collection;
 import java.util.List;
 
-public class Edge{
+public class Edge implements Drawable {
     private World _world;
     private Node _node1,_node2;
     private float _restLength;
@@ -170,13 +170,17 @@ public class Edge{
     public void setColor(Color color){
         _color=color;
     }
-    public boolean hitTest(Vector2 pos){
+    @Override
+    public float hitTest(Vector2 pos){
         Vector2 d = new Vector2(pos).sub(start);
         float x = d.dot(dir);
         float y = new Vector2(d).sub(new Vector2(dir).scl(x)).len();
         float len = start.dst(end);
-        return x>0 && x<len && y>-.1 && y<.1;
+        float xdist = Math.max(0-x,x-len);
+        float ydist = Math.max(y-.1f,-.1f-y);
+        return (float)Math.sqrt(xdist*xdist+ydist*ydist);
     }
+    @Override
     public void render(ShapeRenderer renderer){
         renderer.begin(ShapeRenderer.ShapeType.Filled);
         ColorUtil.setRendererColor(renderer, _color);

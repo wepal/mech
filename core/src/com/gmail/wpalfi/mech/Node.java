@@ -9,7 +9,7 @@ import com.badlogic.gdx.physics.box2d.Fixture;
 import com.badlogic.gdx.physics.box2d.FixtureDef;
 import com.badlogic.gdx.physics.box2d.World;
 
-public class Node {
+public class Node implements Drawable{
     private float _x,_y;
     private float _weight = 1;
     private float _radius = 1;
@@ -72,6 +72,12 @@ public class Node {
     }
     Color getColor(){
         return _color;
+    }
+
+    @Override
+    public float hitTest(Vector2 pos) {
+        Vector2 center = _body.getPosition();
+        return pos.dst(center)-_radius;
     }
 
     public void render(ShapeRenderer renderer) {

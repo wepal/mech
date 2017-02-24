@@ -24,7 +24,7 @@ import com.badlogic.gdx.physics.box2d.joints.MouseJointDef;
 import com.badlogic.gdx.physics.box2d.joints.PrismaticJoint;
 import com.badlogic.gdx.physics.box2d.joints.PrismaticJointDef;
 
-public class Slide {
+public class Slide implements Drawable{
 
     private Vector2 _start, _end;
     private float _home;
