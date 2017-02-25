@@ -1,6 +1,9 @@
 package com.gmail.wpalfi.mech;
 
+import com.badlogic.gdx.Gdx;
+import com.badlogic.gdx.graphics.Camera;
 import com.badlogic.gdx.graphics.glutils.ShapeRenderer;
+import com.badlogic.gdx.math.Matrix4;
 import com.badlogic.gdx.math.Vector2;
 import com.badlogic.gdx.physics.box2d.Body;
 import com.badlogic.gdx.physics.box2d.BodyDef;
@@ -10,6 +13,7 @@ import com.badlogic.gdx.physics.box2d.FixtureDef;
 import com.badlogic.gdx.physics.box2d.World;
 
 public class Node implements Drawable{
+    private Camera _camera;
     private float _x,_y;
     private float _weight = 1;
     private float _radius = 1;
@@ -17,7 +21,8 @@ public class Node implements Drawable{
     private Body _body;
     private Fixture _fixture;
 
-    public Node(World world, float x_, float y_, float radius_, Color color_) {
+    public Node(Camera camera, World world, float x_, float y_, float radius_, Color color_) {
+        _camera=camera;
         _x=x_;
         _y=y_;
         _radius=radius_;
@@ -77,7 +82,9 @@ public class Node implements Drawable{
     @Override
     public float hitTest(Vector2 pos) {
         Vector2 center = _body.getPosition();
-        return pos.dst(center)-_radius;
+        float dist = pos.dst(center)-_radius;
+        dist = Math.max(dist,0f);
+        return dist;
     }
 
     public void render(ShapeRenderer renderer) {
@@ -90,10 +97,19 @@ public class Node implements Drawable{
 
     public void renderSelection(ShapeRenderer renderer) {
         renderer.begin(ShapeRenderer.ShapeType.Filled);
-        renderer.setColor(.2f,.2f,.2f,1);
+        renderer.setColor(.3f,.3f,.3f,1);
         Vector2 pos = _body.getPosition();
-        renderer.circle(pos.x,pos.y,_radius+.6f,64);
+        float margin =  .3f * worldMeterPerScreenCm();
+        renderer.circle(pos.x,pos.y,_radius+margin,64);
         renderer.end();
     }
+    private float pixPerWorldMeter() {
+        return Gdx.graphics.getWidth() / _camera.viewportWidth;
+    }
+    private float worldMeterPerScreenCm() {
+        float pixPerScreenCm = Gdx.graphics.getPpcX();
+        return pixPerScreenCm / pixPerWorldMeter();
+    }
+
 }
 

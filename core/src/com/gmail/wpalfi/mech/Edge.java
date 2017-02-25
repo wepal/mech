@@ -1,5 +1,6 @@
 package com.gmail.wpalfi.mech;
 
+import com.badlogic.gdx.graphics.Camera;
 import com.badlogic.gdx.graphics.glutils.ShapeRenderer;
 import com.badlogic.gdx.math.MathUtils;
 import com.badlogic.gdx.math.Vector2;
@@ -36,7 +37,7 @@ public class Edge implements Drawable {
     private Vector2 pos1,pos2,dir,start,end;
     private float _length;
 
-    public Edge(World world, Node node1, Node node2, Color color){
+    public Edge(Camera camera, World world, Node node1, Node node2, Color color){
         _world=world;
         _node1=node1;
         _node2=node2;
@@ -174,7 +175,9 @@ public class Edge implements Drawable {
         float y = new Vector2(d).sub(new Vector2(dir).scl(x)).len();
         float len = start.dst(end);
         float xdist = Math.max(0-x,x-len);
+        xdist=Math.max(0,xdist);
         float ydist = Math.max(y-.1f,-.1f-y);
+        ydist=Math.max(0,ydist);
         return (float)Math.sqrt(xdist*xdist+ydist*ydist);
     }
     @Override

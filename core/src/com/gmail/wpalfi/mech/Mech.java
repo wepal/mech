@@ -94,13 +94,13 @@ public class Mech extends ApplicationAdapter implements InputProcessor, MenuCons
         cam = new OrthographicCamera(Gdx.graphics.getWidth(), Gdx.graphics.getHeight());
         Gdx.input.setInputProcessor(this);
 
-        nodes.add(new Node(world, 2,6,(float)0.3,Color.WHITE));
-        nodes.add(new Node(world, 9,5,(float)0.3,Color.WHITE));
-        nodes.add(new Node(world, 6,4,(float)0.3,Color.YELLOW));
+        nodes.add(new Node(cam, world, 2,6,(float)0.3,Color.WHITE));
+        nodes.add(new Node(cam, world, 9,5,(float)0.3,Color.WHITE));
+        nodes.add(new Node(cam, world, 6,4,(float)0.3,Color.YELLOW));
 
-        edges.add(new Edge(world, nodes.get(0),nodes.get(1),Color.WHITE));
-        edges.add(new Edge(world, nodes.get(0),nodes.get(2),Color.YELLOW));
-        edges.add(new Edge(world, nodes.get(1),nodes.get(2),Color.YELLOW));
+        edges.add(new Edge(cam, world, nodes.get(0),nodes.get(1),Color.WHITE));
+        edges.add(new Edge(cam, world, nodes.get(0),nodes.get(2),Color.YELLOW));
+        edges.add(new Edge(cam, world, nodes.get(1),nodes.get(2),Color.YELLOW));
 
         Slide slide = new Slide(pullWorld,new Vector2(10,5),new Vector2(12,7),.33f);
         slides.add(slide);
@@ -160,7 +160,7 @@ public class Mech extends ApplicationAdapter implements InputProcessor, MenuCons
 
     private void renderNormal(){
         renderer.setProjectionMatrix(cam.combined);
-        if(drags.isEmpty()){
+        //if(drags.isEmpty()){
             for (Object o : _selection) {
                 if(o instanceof Node){
                     Node node=(Node)o;
@@ -171,7 +171,7 @@ public class Mech extends ApplicationAdapter implements InputProcessor, MenuCons
                     edge.renderSelection(renderer);
                 }
             }
-        }
+        //}
         for (Edge edge : edges) {
             boolean hasDrive =false;
             for (Drag drag: drags.values()) {
@@ -186,6 +186,21 @@ public class Mech extends ApplicationAdapter implements InputProcessor, MenuCons
                 edge.renderDrive(renderer, _selection.contains(edge));
             }
         }
+        int x0=(int)Math.floor(cam.position.x-cam.viewportWidth/2);
+        int x1=(int)Math.ceil(cam.position.x+cam.viewportWidth/2);
+        int y0=(int)Math.floor(cam.position.y-cam.viewportHeight/2);
+        int y1=(int)Math.ceil(cam.position.y+cam.viewportHeight/2);
+        Gdx.gl.glEnable(GL20.GL_BLEND);
+        //Gdx.gl.glBlendFunc(GL20.GL_SRC_ALPHA, GL20.GL_ONE_MINUS_SRC_ALPHA);
+        renderer.begin(ShapeRenderer.ShapeType.Line);
+        renderer.setColor(1,1,1,0.25f);
+        for(int x=x0;x<=x1;x++) {
+            renderer.line(x,y0,x,y1);
+        }
+        for(int y=y0;y<=y1;y++) {
+            renderer.line(x0,y,x1,y);
+        }
+        renderer.end();
         for (Edge edge : edges) {
             edge.render(renderer);
         }
@@ -224,7 +239,7 @@ public class Mech extends ApplicationAdapter implements InputProcessor, MenuCons
         if(hitTestResult==null) {
             return null;
         }
-        float maxDist = .2f*this.worldMeterPerScreenCm();
+        float maxDist = .7f*this.worldMeterPerScreenCm();
         if(hitTestResult.dist>maxDist) {
             return null;
         }
@@ -241,11 +256,12 @@ public class Mech extends ApplicationAdapter implements InputProcessor, MenuCons
             float dist = drawable.hitTest(mousePos);
             if(hitTestResult==null) {
                 hitTestResult = new HitTestResult();
-            }else if(dist>hitTestResult.dist) {
-                continue;
+                hitTestResult.dist=dist;
+                hitTestResult.drawable=drawable;
+            }else if(dist<hitTestResult.dist) {
+                hitTestResult.dist=dist;
+                hitTestResult.drawable=drawable;
             }
-            hitTestResult.dist=dist;
-            hitTestResult.drawable=drawable;
         }
         return hitTestResult;
     }
@@ -323,13 +339,26 @@ public class Mech extends ApplicationAdapter implements InputProcessor, MenuCons
                 && drag.endDrawable instanceof Node) {
             Node start =(Node)drag.startDrawable;
             Node end=(Node)drag.endDrawable;
-            edges.add(new Edge(world, start, end, _properties.color));
+            edges.add(new Edge(cam, world, start, end, _properties.color));
             return;
         }
         //tap
-        if(draw(drag)){
-            return;
+        if(drag.allowTap) {
+            if (draw(drag)) {
+                return;
+            }
+            select(drag);
         }
+    }
+    private float pixPerWorldMeter() {
+        return Gdx.graphics.getWidth() / cam.viewportWidth;
+    }
+    private float worldMeterPerScreenCm() {
+        float pixPerScreenCm = Gdx.graphics.getPpcX();
+        return pixPerScreenCm / pixPerWorldMeter();
+    }
+
+    private void select(Drag drag){
         if(drag.startDrawable==null) {
             _selection.clear();
             onSelectionChanged();
@@ -364,13 +393,6 @@ public class Mech extends ApplicationAdapter implements InputProcessor, MenuCons
             }
         }
     }
-    private float pixPerWorldMeter() {
-        return Gdx.graphics.getWidth() / cam.viewportWidth;
-    }
-    private float worldMeterPerScreenCm() {
-        float pixPerScreenCm = Gdx.graphics.getPpcX();
-        return pixPerScreenCm / pixPerWorldMeter();
-    }
 
     private boolean draw(Drag drag){
         if(drag.startDrawable!=null){
@@ -382,7 +404,7 @@ public class Mech extends ApplicationAdapter implements InputProcessor, MenuCons
             return false;
         }
         if(_properties.tool==Tool.NODE){
-            Node node=new Node(world, drag.end.x,drag.end.y,_properties.radius,_properties.color);
+            Node node=new Node(cam, world, drag.end.x,drag.end.y,_properties.radius,_properties.color);
             nodes.add(node);
             return true;
         }
@@ -409,52 +431,73 @@ public class Mech extends ApplicationAdapter implements InputProcessor, MenuCons
         if(drags.containsKey(pointer)){
             Drag drag = drags.get(pointer);
             drag.screenPix=new Vector2(screenX,screenY);
+            float minMovePix = 0.5f * Gdx.graphics.getPpcX();
+            float distPix = drag.screenPix.dst(drag.startScreenPix);
+            if(distPix>=minMovePix) {
+                drag.allowTap=false;
+            }
             if(drag.startDrawable instanceof Slide){
                 Slide slide = (Slide)drag.startDrawable;
                 slide.touchDragged(mousePos);
                 return true;
             }
-            if(drag.startDrawable==null && drags.size()==1){
-                //pan
-                Vector2 moveWorld = worldMove(drag);
-                cam.position.x = drag.startCamPosition.x - moveWorld.x;
-                cam.position.y = drag.startCamPosition.y + moveWorld.y;
-                cam.update();
+            if(pan(drag)){
                 return true;
             }
-            if(drag.startDrawable==null && drags.size()==2){
-                //zoom
-                Drag drag1 = (Drag)drags.values().toArray()[0];
-                Drag drag2 = (Drag)drags.values().toArray()[1];
-                Vector2 moveWorld1 = worldMove(drag1);
-                Vector2 moveWorld2 = worldMove(drag2);
-                cam.position.x = drag.startCamPosition.x - (moveWorld1.x + moveWorld2.x)/2;
-                cam.position.y = drag.startCamPosition.y + (moveWorld1.y + moveWorld2.y)/2;
-                float zoom = drag1.screenPix.dst(drag2.screenPix) / drag1.startScreenPix.dst(drag2.startScreenPix);
-                cam.viewportWidth = drag.startViewportWidth / zoom;
-                cam.viewportHeight = cam.viewportWidth * Gdx.graphics.getHeight() / Gdx.graphics.getWidth();
-                cam.update();
-                //Gdx.app.log("Mech", cam.position.x + " = "+ drag.startCamPosition.x + " - ( "+moveWorld1.x + " + "+ moveWorld2.x + " )/2");
+            if(zoom(drag)){
                 return true;
             }
+            return true;
         }
         return true;
     }
 
+    private boolean pan(Drag drag){
+        if(drag.allowTap) {
+            return false;
+        }
+        if(drags.size()!=1) {
+            return false;
+        }
+        if(drag.startDrawable instanceof Slide) {
+            return false;
+        }
+        Vector2 moveWorld = worldMove(drag);
+        cam.position.x = drag.startCamPosition.x - moveWorld.x;
+        cam.position.y = drag.startCamPosition.y + moveWorld.y;
+        cam.update();
+        drag.allowTap=false;
+        return true;
+    }
+    private boolean zoom(Drag drag) {
+        if (drag.allowTap) {
+            return false;
+        }
+        if (drags.size() != 2) {
+            return false;
+        }
+        Drag drag1 = (Drag)drags.values().toArray()[0];
+        Drag drag2 = (Drag)drags.values().toArray()[1];
+        if (drag1.startDrawable instanceof Slide || drag2.startDrawable instanceof Slide) {
+            return false;
+        }
+        Vector2 moveWorld1 = worldMove(drag1);
+        Vector2 moveWorld2 = worldMove(drag2);
+        cam.position.x = drag.startCamPosition.x - (moveWorld1.x + moveWorld2.x)/2;
+        cam.position.y = drag.startCamPosition.y + (moveWorld1.y + moveWorld2.y)/2;
+        float zoom = drag1.screenPix.dst(drag2.screenPix) / drag1.startScreenPix.dst(drag2.startScreenPix);
+        cam.viewportWidth = drag.startViewportWidth / zoom;
+        cam.viewportHeight = cam.viewportWidth * Gdx.graphics.getHeight() / Gdx.graphics.getWidth();
+        cam.update();
+        //Gdx.app.log("Mech", cam.position.x + " = "+ drag.startCamPosition.x + " - ( "+moveWorld1.x + " + "+ moveWorld2.x + " )/2");
+        drag1.allowTap=false;
+        drag2.allowTap=false;
+        return true;
+    }
     private Vector2 worldMove(Drag drag){
         Vector2 movePix = new Vector2(drag.screenPix).sub(drag.startScreenPix);
         Vector2 moveWorld = new Vector2(movePix).scl(1/pixPerWorldMeter());
         return moveWorld;
-    }
-
-    private boolean isZoomGesture(){
-        if(drags.size()!=2){
-            return false;
-        }
-        for(Drag drag: drags.values()){
-            if(drag.startDrawable!=null);
-        }
-        return true;
     }
 
     @Override

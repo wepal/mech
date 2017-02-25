@@ -100,7 +100,7 @@ public class Slide implements Drawable{
     public void render(ShapeRenderer renderer) {
         Gdx.gl.glEnable(GL20.GL_BLEND);
         renderer.begin(ShapeRenderer.ShapeType.Filled);
-        renderer.setColor(.5f,.5f,1f,.2f);
+        renderer.setColor(.5f,.5f,1f,.4f);
         Vector2 pos = _body.getPosition();
         renderer.circle(pos.x,pos.y,1,64);
         renderer.end();
