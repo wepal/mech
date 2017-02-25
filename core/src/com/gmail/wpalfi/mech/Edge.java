@@ -1,5 +1,6 @@
 package com.gmail.wpalfi.mech;
 
+import com.badlogic.gdx.Gdx;
 import com.badlogic.gdx.graphics.Camera;
 import com.badlogic.gdx.graphics.glutils.ShapeRenderer;
 import com.badlogic.gdx.math.MathUtils;
@@ -21,6 +22,7 @@ import java.util.ArrayList;
 import java.util.List;
 
 public class Edge implements Drawable {
+    private Camera _camera;
     private World _world;
     private Node _node1,_node2;
     private float _restLength;
@@ -38,6 +40,7 @@ public class Edge implements Drawable {
     private float _length;
 
     public Edge(Camera camera, World world, Node node1, Node node2, Color color){
+        _camera=camera;
         _world=world;
         _node1=node1;
         _node2=node2;
@@ -190,7 +193,8 @@ public class Edge implements Drawable {
     public void renderSelection(ShapeRenderer renderer){
         renderer.begin(ShapeRenderer.ShapeType.Filled);
         renderer.setColor(.2f,.2f,.2f,1);
-        renderer.rectLine(start,end,1f);
+        float margin =  .3f * worldMeterPerScreenCm();
+        renderer.rectLine(start,end,.1f+2*margin);
         renderer.end();
     }
     public void renderDrive(ShapeRenderer renderer, boolean selected) {
@@ -200,7 +204,8 @@ public class Edge implements Drawable {
         }else{
             renderer.setColor(.1f,.1f,.5f,1);
         }
-        renderer.rectLine(start,end,1f);
+        float margin =  .3f * worldMeterPerScreenCm();
+        renderer.rectLine(start,end,.1f+2*margin);
         renderer.end();
     }
     //TODO: remove?
@@ -231,5 +236,12 @@ public class Edge implements Drawable {
             }
         }
         return null;
+    }
+    private float pixPerWorldMeter() {
+        return Gdx.graphics.getWidth() / _camera.viewportWidth;
+    }
+    private float worldMeterPerScreenCm() {
+        float pixPerScreenCm = Gdx.graphics.getPpcX();
+        return pixPerScreenCm / pixPerWorldMeter();
     }
 }

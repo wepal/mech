@@ -186,21 +186,7 @@ public class Mech extends ApplicationAdapter implements InputProcessor, MenuCons
                 edge.renderDrive(renderer, _selection.contains(edge));
             }
         }
-        int x0=(int)Math.floor(cam.position.x-cam.viewportWidth/2);
-        int x1=(int)Math.ceil(cam.position.x+cam.viewportWidth/2);
-        int y0=(int)Math.floor(cam.position.y-cam.viewportHeight/2);
-        int y1=(int)Math.ceil(cam.position.y+cam.viewportHeight/2);
-        Gdx.gl.glEnable(GL20.GL_BLEND);
-        //Gdx.gl.glBlendFunc(GL20.GL_SRC_ALPHA, GL20.GL_ONE_MINUS_SRC_ALPHA);
-        renderer.begin(ShapeRenderer.ShapeType.Line);
-        renderer.setColor(1,1,1,0.25f);
-        for(int x=x0;x<=x1;x++) {
-            renderer.line(x,y0,x,y1);
-        }
-        for(int y=y0;y<=y1;y++) {
-            renderer.line(x0,y,x1,y);
-        }
-        renderer.end();
+        grid();
         for (Edge edge : edges) {
             edge.render(renderer);
         }
@@ -211,7 +197,24 @@ public class Mech extends ApplicationAdapter implements InputProcessor, MenuCons
             slide.render(renderer);
         }
     }
-	
+
+    private void grid(){
+        int x0=(int)Math.floor(cam.position.x-cam.viewportWidth/2);
+        int x1=(int)Math.ceil(cam.position.x+cam.viewportWidth/2);
+        int y0=(int)Math.floor(cam.position.y-cam.viewportHeight/2);
+        int y1=(int)Math.ceil(cam.position.y+cam.viewportHeight/2);
+        Gdx.gl.glEnable(GL20.GL_BLEND);
+        renderer.begin(ShapeRenderer.ShapeType.Line);
+        renderer.setColor(1,1,1,0.25f);
+        for(int x=x0;x<=x1;x++) {
+            renderer.line(x,y0,x,y1);
+        }
+        for(int y=y0;y<=y1;y++) {
+            renderer.line(x0,y,x1,y);
+        }
+        renderer.end();
+    }
+
 	@Override
 	public void dispose () {
         //TODO
