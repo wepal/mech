@@ -224,7 +224,7 @@ public class Mech extends ApplicationAdapter implements InputProcessor, MenuCons
         if(hitTestResult==null) {
             return null;
         }
-        float maxDist = screenCmToWorldDist(.2f);
+        float maxDist = .2f*this.worldMeterPerScreenCm();
         if(hitTestResult.dist>maxDist) {
             return null;
         }
@@ -267,8 +267,10 @@ public class Mech extends ApplicationAdapter implements InputProcessor, MenuCons
         Vector2 mousePos = new Vector2(mousePos3.x, mousePos3.y);
         Drag drag = new Drag();
         drag.startScreenPix = new Vector2(screenX,screenY);
+        drag.screenPix=drag.startScreenPix;
         drag.startCamPosition = new Vector3(cam.position);
-        drag.start = mousePos;
+        drag.startViewportWidth = cam.viewportWidth;
+        drag.start = new Vector2(mousePos);
         drag.startDrawable=hitTest(mousePos);
         if(drag.startDrawable instanceof Slide) {
             Slide slide=(Slide)drag.startDrawable;
@@ -362,16 +364,19 @@ public class Mech extends ApplicationAdapter implements InputProcessor, MenuCons
             }
         }
     }
-    private float screenCmToWorldDist(float screenDistCm){
-        float pixPerWorldMeter = Gdx.graphics.getWidth() / cam.viewportWidth;
-        float pixPerScreenCm = Gdx.graphics.getPpcX();
-        return screenDistCm * pixPerScreenCm / pixPerWorldMeter;
+    private float pixPerWorldMeter() {
+        return Gdx.graphics.getWidth() / cam.viewportWidth;
     }
+    private float worldMeterPerScreenCm() {
+        float pixPerScreenCm = Gdx.graphics.getPpcX();
+        return pixPerScreenCm / pixPerWorldMeter();
+    }
+
     private boolean draw(Drag drag){
         if(drag.startDrawable!=null){
             return false;
         }
-        float maxDist = screenCmToWorldDist(.2f);
+        float maxDist = .2f * worldMeterPerScreenCm();
         float dist = drag.end.dst(drag.start);
         if(dist>maxDist){
             return false;
@@ -403,21 +408,43 @@ public class Mech extends ApplicationAdapter implements InputProcessor, MenuCons
         }
         if(drags.containsKey(pointer)){
             Drag drag = drags.get(pointer);
+            drag.screenPix=new Vector2(screenX,screenY);
             if(drag.startDrawable instanceof Slide){
                 Slide slide = (Slide)drag.startDrawable;
                 slide.touchDragged(mousePos);
                 return true;
             }
             if(drag.startDrawable==null && drags.size()==1){
-                Vector2 movePix = new Vector2(screenX,screenY).sub(drag.startScreenPix);
-                float pixPerWorldMeter = Gdx.graphics.getWidth() / cam.viewportWidth;
-                Vector2 moveWorld = new Vector2(movePix).scl(1/pixPerWorldMeter);
+                //pan
+                Vector2 moveWorld = worldMove(drag);
                 cam.position.x = drag.startCamPosition.x - moveWorld.x;
                 cam.position.y = drag.startCamPosition.y + moveWorld.y;
                 cam.update();
+                return true;
+            }
+            if(drag.startDrawable==null && drags.size()==2){
+                //zoom
+                Drag drag1 = (Drag)drags.values().toArray()[0];
+                Drag drag2 = (Drag)drags.values().toArray()[1];
+                Vector2 moveWorld1 = worldMove(drag1);
+                Vector2 moveWorld2 = worldMove(drag2);
+                cam.position.x = drag.startCamPosition.x - (moveWorld1.x + moveWorld2.x)/2;
+                cam.position.y = drag.startCamPosition.y + (moveWorld1.y + moveWorld2.y)/2;
+                float zoom = drag1.screenPix.dst(drag2.screenPix) / drag1.startScreenPix.dst(drag2.startScreenPix);
+                cam.viewportWidth = drag.startViewportWidth / zoom;
+                cam.viewportHeight = cam.viewportWidth * Gdx.graphics.getHeight() / Gdx.graphics.getWidth();
+                cam.update();
+                //Gdx.app.log("Mech", cam.position.x + " = "+ drag.startCamPosition.x + " - ( "+moveWorld1.x + " + "+ moveWorld2.x + " )/2");
+                return true;
             }
         }
         return true;
+    }
+
+    private Vector2 worldMove(Drag drag){
+        Vector2 movePix = new Vector2(drag.screenPix).sub(drag.startScreenPix);
+        Vector2 moveWorld = new Vector2(movePix).scl(1/pixPerWorldMeter());
+        return moveWorld;
     }
 
     private boolean isZoomGesture(){

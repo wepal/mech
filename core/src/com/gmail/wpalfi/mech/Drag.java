@@ -9,7 +9,9 @@ import com.badlogic.gdx.math.Vector3;
 
 public class Drag {
     Vector2 startScreenPix;
+    Vector2 screenPix;
     Vector3 startCamPosition;
+    float startViewportWidth;
     Vector2 start;
     Vector2 end;
     Drawable startDrawable;

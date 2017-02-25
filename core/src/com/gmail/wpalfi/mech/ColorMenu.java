@@ -45,7 +45,7 @@ public class ColorMenu {
             float x=_backgroundX + _margin + i*(_buttonWidth+_padding);
             float y=_backgroundY+_backgroundHeight/2-_buttonWidth/2;
             _renderer.rect(x-5,y-5,_buttonWidth+10,_buttonWidth+10);
-            ColorUtil.setRendererColor(_renderer,_colors.get(i));
+            Util.setRendererColor(_renderer,_colors.get(i));
             _renderer.rect(x,y,_buttonWidth,_buttonWidth);
         }
         _renderer.end();

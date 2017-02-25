@@ -82,7 +82,7 @@ public class Node implements Drawable{
 
     public void render(ShapeRenderer renderer) {
         renderer.begin(ShapeRenderer.ShapeType.Line);
-        ColorUtil.setRendererColor(renderer, _color);
+        Util.setRendererColor(renderer, _color);
         Vector2 pos = _body.getPosition();
         renderer.circle(pos.x,pos.y,_radius,64);
         renderer.end();

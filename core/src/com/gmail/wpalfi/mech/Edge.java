@@ -1,7 +1,5 @@
 package com.gmail.wpalfi.mech;
 
-import com.badlogic.gdx.Gdx;
-import com.badlogic.gdx.graphics.GL20;
 import com.badlogic.gdx.graphics.glutils.ShapeRenderer;
 import com.badlogic.gdx.math.MathUtils;
 import com.badlogic.gdx.math.Vector2;
@@ -19,7 +17,6 @@ import com.badlogic.gdx.physics.box2d.joints.RevoluteJoint;
 import com.badlogic.gdx.physics.box2d.joints.RevoluteJointDef;
 
 import java.util.ArrayList;
-import java.util.Collection;
 import java.util.List;
 
 public class Edge implements Drawable {
@@ -183,7 +180,7 @@ public class Edge implements Drawable {
     @Override
     public void render(ShapeRenderer renderer){
         renderer.begin(ShapeRenderer.ShapeType.Filled);
-        ColorUtil.setRendererColor(renderer, _color);
+        Util.setRendererColor(renderer, _color);
         renderer.rectLine(start,end,.1f);
         renderer.end();
     }
