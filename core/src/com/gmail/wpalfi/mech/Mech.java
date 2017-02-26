@@ -350,6 +350,7 @@ public class Mech extends ApplicationAdapter implements InputProcessor, MenuCons
     private void dragEnd(Drag drag) {
         if(drag.type==DragType.PAN||drag.type==DragType.ZOOM){
             finishDragOrZoom();
+            return;
         }
         if(drag.type==DragType.SLIDE){
             Slide slide = (Slide)drag.startDrawable;
@@ -455,6 +456,10 @@ public class Mech extends ApplicationAdapter implements InputProcessor, MenuCons
             float minMovePix = 0.1f * Gdx.graphics.getPpcX();
             float distPix = drag.screenPix.dst(drag.startScreenPix);
             if(drag.type==DragType.UNDEFINED && distPix>=minMovePix) {
+                for(Drag d:drags.values()){
+                    if(d.type==DragType.UNDEFINED)
+                        d.type=DragType.ZOOM;
+                }
                 if(isZoomGesture(drag))
                     drag.type=DragType.ZOOM;
                 else
