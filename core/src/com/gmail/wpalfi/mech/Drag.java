@@ -13,6 +13,7 @@ public class Drag {
     Vector3 startCamPosition;
     float startViewportWidth;
     Vector2 start;
+    Vector2 current;
     Vector2 end;
     Drawable startDrawable;
     Drawable endDrawable;

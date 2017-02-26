@@ -99,7 +99,7 @@ public class Node implements Drawable{
         renderer.begin(ShapeRenderer.ShapeType.Filled);
         renderer.setColor(.3f,.3f,.3f,1);
         Vector2 pos = _body.getPosition();
-        float margin =  .3f * worldMeterPerScreenCm();
+        float margin =  .2f * worldMeterPerScreenCm();
         renderer.circle(pos.x,pos.y,_radius+margin,64);
         renderer.end();
     }

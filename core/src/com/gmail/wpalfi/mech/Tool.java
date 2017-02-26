@@ -5,5 +5,5 @@ package com.gmail.wpalfi.mech;
  */
 
 public enum Tool {
-    NODE,EDGE,SLIDE
+    NODE,EDGE,SLIDE,DELETE
 }

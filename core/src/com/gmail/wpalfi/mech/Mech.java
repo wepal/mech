@@ -3,37 +3,27 @@ package com.gmail.wpalfi.mech;
 import com.badlogic.gdx.ApplicationAdapter;
 import com.badlogic.gdx.Gdx;
 import com.badlogic.gdx.InputProcessor;
+import com.badlogic.gdx.graphics.Camera;
 import com.badlogic.gdx.graphics.GL20;
 import com.badlogic.gdx.graphics.OrthographicCamera;
 import com.badlogic.gdx.graphics.glutils.ShapeRenderer;
 import com.badlogic.gdx.physics.box2d.Box2DDebugRenderer;
 import com.badlogic.gdx.math.Vector2;
 import com.badlogic.gdx.math.Vector3;
-import com.badlogic.gdx.physics.box2d.Body;
-import com.badlogic.gdx.physics.box2d.BodyDef;
-import com.badlogic.gdx.physics.box2d.CircleShape;
-import com.badlogic.gdx.physics.box2d.FixtureDef;
 import com.badlogic.gdx.physics.box2d.World;
-import com.badlogic.gdx.physics.box2d.joints.DistanceJoint;
-import com.badlogic.gdx.physics.box2d.joints.DistanceJointDef;
-import com.badlogic.gdx.physics.box2d.joints.MouseJoint;
-import com.badlogic.gdx.physics.box2d.joints.MouseJointDef;
-import com.badlogic.gdx.physics.box2d.joints.PrismaticJoint;
-import com.badlogic.gdx.physics.box2d.joints.PrismaticJointDef;
-import com.badlogic.gdx.scenes.scene2d.utils.*;
 import com.badlogic.gdx.utils.TimeUtils;
 import java.util.List;
 import java.util.ArrayList;
 import java.util.HashMap;
 
 public class Mech extends ApplicationAdapter implements InputProcessor, MenuConsumer, Slider.Listener {
-    List<Node> nodes = new ArrayList<Node>();;
-    List<Edge> edges = new ArrayList<Edge>();
-    List<Slide> slides = new ArrayList<Slide>();
-    World world, pullWorld;
-    OrthographicCamera cam;
-    ShapeRenderer renderer;
-    HashMap<Integer,Drag> drags=new HashMap<Integer, Drag>();
+    List<Node> _nodes = new ArrayList<Node>();;
+    List<Edge> _edges = new ArrayList<Edge>();
+    List<Slide> _slides = new ArrayList<Slide>();
+    World _world, _slideWorld;
+    OrthographicCamera _camera, _slideCamera;
+    ShapeRenderer _renderer, _slideRenderer;
+    HashMap<Integer,Drag> _drags =new HashMap<Integer, Drag>();
     Box2DDebugRenderer _debugRenderer;
     Properties _properties=new Properties();
     List<Object> _selection=new ArrayList<Object>();
@@ -84,50 +74,58 @@ public class Mech extends ApplicationAdapter implements InputProcessor, MenuCons
 
     @Override
 	public void create () {
-        renderer= new ShapeRenderer();
+        _renderer = new ShapeRenderer();
         _debugRenderer = new Box2DDebugRenderer();
+        _slideRenderer = new ShapeRenderer();
         Vector2 gravity = new Vector2(0.0f, -10.0f);
         boolean doSleep = true;
-        world = new World(gravity, doSleep);
-        //world.setContactListener(this);
-        pullWorld=new World(new Vector2(0,0),doSleep);
-        cam = new OrthographicCamera(Gdx.graphics.getWidth(), Gdx.graphics.getHeight());
+        _world = new World(gravity, doSleep);
+        //_world.setContactListener(this);
+        _slideWorld =new World(new Vector2(0,0),doSleep);
+
+        _camera = new OrthographicCamera(Gdx.graphics.getWidth(), Gdx.graphics.getHeight());
+        _camera.viewportWidth = 20;
+        _camera.viewportHeight = _camera.viewportWidth * Gdx.graphics.getHeight() / Gdx.graphics.getWidth();
+        _camera.position.set(_camera.viewportWidth / 2, _camera.viewportHeight / 2, 0);
+        _camera.update();
+
+        _slideCamera = new OrthographicCamera(Gdx.graphics.getWidth(), Gdx.graphics.getHeight());
+        _slideCamera.viewportWidth=20;
+        _slideCamera.viewportHeight= _slideCamera.viewportWidth * Gdx.graphics.getHeight() / Gdx.graphics.getWidth();
+        _slideCamera.position.set(_slideCamera.viewportWidth / 2, _slideCamera.viewportHeight / 2, 0);
+        _slideCamera.update();
+
         Gdx.input.setInputProcessor(this);
 
-        nodes.add(new Node(cam, world, 2,6,(float)0.3,Color.WHITE));
-        nodes.add(new Node(cam, world, 9,5,(float)0.3,Color.WHITE));
-        nodes.add(new Node(cam, world, 6,4,(float)0.3,Color.YELLOW));
+        _nodes.add(new Node(_camera, _world, 2,6,(float)0.3,Color.WHITE));
+        _nodes.add(new Node(_camera, _world, 9,5,(float)0.3,Color.WHITE));
+        _nodes.add(new Node(_camera, _world, 6,4,(float)0.3,Color.YELLOW));
 
-        edges.add(new Edge(cam, world, nodes.get(0),nodes.get(1),Color.WHITE));
-        edges.add(new Edge(cam, world, nodes.get(0),nodes.get(2),Color.YELLOW));
-        edges.add(new Edge(cam, world, nodes.get(1),nodes.get(2),Color.YELLOW));
+        _edges.add(new Edge(_camera, _world, _nodes.get(0), _nodes.get(1),Color.WHITE));
+        _edges.add(new Edge(_camera, _world, _nodes.get(0), _nodes.get(2),Color.YELLOW));
+        _edges.add(new Edge(_camera, _world, _nodes.get(1), _nodes.get(2),Color.YELLOW));
 
-        Slide slide = new Slide(pullWorld,new Vector2(10,5),new Vector2(12,7),.33f);
-        slides.add(slide);
+        Slide slide = new Slide(_slideWorld,new Vector2(17,5),new Vector2(17,7),.33f);
+        _slides.add(slide);
 
         Drive drive=new Drive();
         drive.slide=slide;
         drive.length=1.5f;
-        edges.get(1).addDrive(drive);
+        _edges.get(1).addDrive(drive);
 
         _toolBar=new ToolBar(this);
-
-        cam.viewportWidth = 20;
-        cam.viewportHeight = cam.viewportWidth * Gdx.graphics.getHeight() / Gdx.graphics.getWidth();
-        cam.position.set(cam.viewportWidth / 2, cam.viewportHeight / 2, 0);
-        cam.update();
     }
 
 
     private void tick (float timeStep, int iters) {
-        for(int i=0; i<edges.size();i++) {
-            edges.get(i).update();
+        for(int i = 0; i< _edges.size(); i++) {
+            _edges.get(i).update();
         }
 
         float dt = timeStep / iters;
         for (int i = 0; i < iters; i++) {
-            world.step(dt, 10, 10);
-            pullWorld.step(dt,10,10);
+            _world.step(dt, 10, 10);
+            _slideWorld.step(dt,10,10);
         }
     }
 
@@ -145,8 +143,8 @@ public class Mech extends ApplicationAdapter implements InputProcessor, MenuCons
         gl.glClear(GL20.GL_COLOR_BUFFER_BIT);
 
         if(_properties.useDebugRenderer){
-            _debugRenderer.render(world,cam.combined);
-            _debugRenderer.render(pullWorld,cam.combined);
+            _debugRenderer.render(_world, _camera.combined);
+            _debugRenderer.render(_slideWorld, _camera.combined);
 
         }else{
             renderNormal();
@@ -159,22 +157,23 @@ public class Mech extends ApplicationAdapter implements InputProcessor, MenuCons
     }
 
     private void renderNormal(){
-        renderer.setProjectionMatrix(cam.combined);
-        //if(drags.isEmpty()){
+        _renderer.setProjectionMatrix(_camera.combined);
+        _slideRenderer.setProjectionMatrix(_slideCamera.combined);
+        //if(_drags.isEmpty()){
             for (Object o : _selection) {
                 if(o instanceof Node){
                     Node node=(Node)o;
-                    node.renderSelection(renderer);
+                    node.renderSelection(_renderer);
                 }
                 if(o instanceof Edge){
                     Edge edge=(Edge)o;
-                    edge.renderSelection(renderer);
+                    edge.renderSelection(_renderer);
                 }
             }
         //}
-        for (Edge edge : edges) {
+        for (Edge edge : _edges) {
             boolean hasDrive =false;
-            for (Drag drag: drags.values()) {
+            for (Drag drag: _drags.values()) {
                 if(drag.startDrawable instanceof Slide){
                     Slide slide=(Slide)drag.startDrawable;
                     if(edge.hasDrive(slide)){
@@ -183,36 +182,41 @@ public class Mech extends ApplicationAdapter implements InputProcessor, MenuCons
                 }
             }
             if(hasDrive){
-                edge.renderDrive(renderer, _selection.contains(edge));
+                edge.renderDrive(_renderer, _selection.contains(edge));
             }
         }
         grid();
-        for (Edge edge : edges) {
-            edge.render(renderer);
+        for (Edge edge : _edges) {
+            edge.render(_renderer);
         }
-        for (Node node : nodes) {
-            node.render(renderer);
+        for(Drag drag: _drags.values()){
+            if(drag.type==DragType.DRAWEDGE){
+                Edge.renderFloatingEdge(_renderer,(Node)drag.startDrawable,drag.current,_properties.color);
+            }
         }
-        for (Slide slide : slides) {
-            slide.render(renderer);
+        for (Node node : _nodes) {
+            node.render(_renderer);
+        }
+        for (Slide slide : _slides) {
+            slide.render(_slideRenderer);
         }
     }
 
     private void grid(){
-        int x0=(int)Math.floor(cam.position.x-cam.viewportWidth/2);
-        int x1=(int)Math.ceil(cam.position.x+cam.viewportWidth/2);
-        int y0=(int)Math.floor(cam.position.y-cam.viewportHeight/2);
-        int y1=(int)Math.ceil(cam.position.y+cam.viewportHeight/2);
+        int x0=(int)Math.floor(_camera.position.x- _camera.viewportWidth/2);
+        int x1=(int)Math.ceil(_camera.position.x+ _camera.viewportWidth/2);
+        int y0=(int)Math.floor(_camera.position.y- _camera.viewportHeight/2);
+        int y1=(int)Math.ceil(_camera.position.y+ _camera.viewportHeight/2);
         Gdx.gl.glEnable(GL20.GL_BLEND);
-        renderer.begin(ShapeRenderer.ShapeType.Line);
-        renderer.setColor(.5f,.5f,.5f,0.25f);
+        _renderer.begin(ShapeRenderer.ShapeType.Line);
+        _renderer.setColor(.5f,.5f,.5f,0.25f);
         for(int x=x0;x<=x1;x++) {
-            renderer.line(x,y0,x,y1);
+            _renderer.line(x,y0,x,y1);
         }
         for(int y=y0;y<=y1;y++) {
-            renderer.line(x0,y,x1,y);
+            _renderer.line(x0,y,x1,y);
         }
-        renderer.end();
+        _renderer.end();
     }
 
 	@Override
@@ -235,15 +239,15 @@ public class Mech extends ApplicationAdapter implements InputProcessor, MenuCons
         return false;
     }
 
-    private Drawable hitTest(Vector2 mousePos) {
-        HitTestResult hitTestResult = hitTest(null, edges, mousePos);
-        hitTestResult = hitTest(hitTestResult ,nodes, mousePos);
-        hitTestResult = hitTest(hitTestResult ,slides, mousePos);
+    private Drawable hitTest(Vector2 mousePosPix) {
+        HitTestResult hitTestResult = hitTest(null, _edges, mousePosPix, _camera);
+        hitTestResult = hitTest(hitTestResult , _nodes, mousePosPix, _camera);
+        hitTestResult = hitTest(hitTestResult , _slides, mousePosPix, _slideCamera);
         if(hitTestResult==null) {
             return null;
         }
-        float maxDist = .7f*this.worldMeterPerScreenCm();
-        if(hitTestResult.dist>maxDist) {
+        float maxDistPix = .7f * Gdx.graphics.getPpcX();
+        if(hitTestResult.distPix>maxDistPix) {
             return null;
         }
         return hitTestResult.drawable;
@@ -251,18 +255,22 @@ public class Mech extends ApplicationAdapter implements InputProcessor, MenuCons
 
     private class HitTestResult {
         Drawable drawable;
-        float dist;
+        float distPix;
     }
 
-    private HitTestResult hitTest(HitTestResult hitTestResult ,List<? extends Drawable> drawables, Vector2 mousePos) {
+    private HitTestResult hitTest(HitTestResult hitTestResult, List<? extends Drawable> drawables, Vector2 mousePosPix, OrthographicCamera camera) {
+        Vector3 mousePosPix3 = new Vector3(mousePosPix.x,mousePosPix.y,0);
+        Vector3 mousePos3 = camera.unproject(mousePosPix3);
+        Vector2 mousePos = new Vector2(mousePos3.x,mousePos3.y);
         for (Drawable drawable : drawables) {
             float dist = drawable.hitTest(mousePos);
+            float distPix = dist * Gdx.graphics.getWidth() / camera.viewportWidth;
             if(hitTestResult==null) {
                 hitTestResult = new HitTestResult();
-                hitTestResult.dist=dist;
+                hitTestResult.distPix=distPix;
                 hitTestResult.drawable=drawable;
-            }else if(dist<hitTestResult.dist) {
-                hitTestResult.dist=dist;
+            }else if(distPix<hitTestResult.distPix) {
+                hitTestResult.distPix=distPix;
                 hitTestResult.drawable=drawable;
             }
         }
@@ -283,15 +291,16 @@ public class Mech extends ApplicationAdapter implements InputProcessor, MenuCons
             }
             _dragSlider = null;
         }
-        Vector3 mousePos3 = cam.unproject(new Vector3(screenX, screenY, 0));
+        Vector3 mousePos3 = _camera.unproject(new Vector3(screenX, screenY, 0));
         Vector2 mousePos = new Vector2(mousePos3.x, mousePos3.y);
         Drag drag = new Drag();
         drag.startScreenPix = new Vector2(screenX,screenY);
         drag.screenPix=drag.startScreenPix;
-        drag.startCamPosition = new Vector3(cam.position);
-        drag.startViewportWidth = cam.viewportWidth;
+        drag.startCamPosition = new Vector3(_camera.position);
+        drag.startViewportWidth = _camera.viewportWidth;
         drag.start = new Vector2(mousePos);
-        drag.startDrawable=hitTest(mousePos);
+        drag.current= new Vector2(mousePos);
+        drag.startDrawable=hitTest(drag.startScreenPix);
         if(drag.startDrawable instanceof Slide) {
             drag.type=DragType.SLIDE;
             Slide slide=(Slide)drag.startDrawable;
@@ -303,7 +312,7 @@ public class Mech extends ApplicationAdapter implements InputProcessor, MenuCons
                 && drag.startDrawable instanceof Node){
             drag.type=DragType.DRAWEDGE;
         }
-        drags.put(pointer, drag);
+        _drags.put(pointer, drag);
         return true;
     }
     private void onSelectionChanged(){
@@ -324,26 +333,26 @@ public class Mech extends ApplicationAdapter implements InputProcessor, MenuCons
                 return true;
             }
         }
-        Vector3 mousePos3 = cam.unproject(new Vector3(screenX,screenY,0));
+        Vector3 mousePos3 = _camera.unproject(new Vector3(screenX,screenY,0));
         Vector2 mousePos = new Vector2(mousePos3.x,mousePos3.y);
-        if(!drags.containsKey(pointer)) {
+        if(!_drags.containsKey(pointer)) {
             return true;
         }
-        Drag drag=drags.get(pointer);
+        Drag drag= _drags.get(pointer);
         drag.end=mousePos;
         drag.screenPix=new Vector2(screenX,screenY);
-        drag.endDrawable=hitTest(mousePos);
+        drag.endDrawable=hitTest(drag.screenPix);
         dragEnd(drag);
-        drags.remove(pointer);
+        _drags.remove(pointer);
         return true;
     }
     private void finishDragOrZoom(){
-        for(Drag drag:drags.values()) {
+        for(Drag drag: _drags.values()) {
             if (drag.type==DragType.PAN || drag.type==DragType.ZOOM) {
                 drag.startDrawable = null;
                 drag.startScreenPix = new Vector2(drag.screenPix);
-                drag.startCamPosition = new Vector3(cam.position);
-                drag.startViewportWidth = cam.viewportWidth;
+                drag.startCamPosition = new Vector3(_camera.position);
+                drag.startViewportWidth = _camera.viewportWidth;
             }
         }
     }
@@ -361,11 +370,14 @@ public class Mech extends ApplicationAdapter implements InputProcessor, MenuCons
                 && drag.endDrawable instanceof Node) {
             Node start =(Node)drag.startDrawable;
             Node end=(Node)drag.endDrawable;
-            edges.add(new Edge(cam, world, start, end, _properties.color));
+            _edges.add(new Edge(_camera, _world, start, end, _properties.color));
             return;
         }
         //tap
         if(drag.type==DragType.UNDEFINED) {
+            if(delete(drag)){
+                return;
+            }
             if (draw(drag)) {
                 return;
             }
@@ -373,7 +385,7 @@ public class Mech extends ApplicationAdapter implements InputProcessor, MenuCons
         }
     }
     private float pixPerWorldMeter() {
-        return Gdx.graphics.getWidth() / cam.viewportWidth;
+        return Gdx.graphics.getWidth() / _camera.viewportWidth;
     }
     private float worldMeterPerScreenCm() {
         float pixPerScreenCm = Gdx.graphics.getPpcX();
@@ -392,11 +404,11 @@ public class Mech extends ApplicationAdapter implements InputProcessor, MenuCons
         _selection.add(drag.startDrawable);
         onSelectionChanged();
 
-        if(drag.startDrawable instanceof  Edge && drags.size()==2){
+        if(drag.startDrawable instanceof  Edge && _drags.size()==2){
             Edge edge=(Edge)drag.startDrawable;
             Slide slide=null;
-            Drag drag1 = (Drag)drags.values().toArray()[0];
-            Drag drag2 = (Drag)drags.values().toArray()[1];
+            Drag drag1 = (Drag) _drags.values().toArray()[0];
+            Drag drag2 = (Drag) _drags.values().toArray()[1];
             if(drag1.startDrawable instanceof Slide)
                 slide=(Slide)drag1.startDrawable;
             if(drag2.startDrawable instanceof Slide)
@@ -426,13 +438,13 @@ public class Mech extends ApplicationAdapter implements InputProcessor, MenuCons
             return false;
         }
         if(_properties.tool==Tool.NODE){
-            Node node=new Node(cam, world, drag.end.x,drag.end.y,_properties.radius,_properties.color);
-            nodes.add(node);
+            Node node=new Node(_camera, _world, drag.end.x,drag.end.y,_properties.radius,_properties.color);
+            _nodes.add(node);
             return true;
         }
         if(_properties.tool==Tool.SLIDE){
-            Slide slide = new Slide(pullWorld, new Vector2(drag.end).add(0,1), new Vector2(drag.end).add(0,-1),.5f);
-            slides.add(slide);
+            Slide slide = new Slide(_slideWorld, new Vector2(drag.end).add(0,1), new Vector2(drag.end).add(0,-1),.5f);
+            _slides.add(slide);
             return true;
         }
         return false;
@@ -440,7 +452,7 @@ public class Mech extends ApplicationAdapter implements InputProcessor, MenuCons
 
     @Override
     public boolean touchDragged(int screenX, int screenY, int pointer) {
-        Vector3 mousePos3 = cam.unproject(new Vector3(screenX,screenY,0));
+        Vector3 mousePos3 = _camera.unproject(new Vector3(screenX,screenY,0));
         Vector2 mousePos = new Vector2(mousePos3.x,mousePos3.y);
         if(_toolBar.touchDragged(screenX,screenY, pointer)){
             return true;
@@ -450,13 +462,14 @@ public class Mech extends ApplicationAdapter implements InputProcessor, MenuCons
                 return true;
             }
         }
-        if(drags.containsKey(pointer)){
-            Drag drag = drags.get(pointer);
+        if(_drags.containsKey(pointer)){
+            Drag drag = _drags.get(pointer);
             drag.screenPix=new Vector2(screenX,screenY);
+            drag.current= new Vector2(mousePos);
             float minMovePix = 0.1f * Gdx.graphics.getPpcX();
             float distPix = drag.screenPix.dst(drag.startScreenPix);
             if(drag.type==DragType.UNDEFINED && distPix>=minMovePix) {
-                for(Drag d:drags.values()){
+                for(Drag d: _drags.values()){
                     if(d.type==DragType.UNDEFINED)
                         d.type=DragType.ZOOM;
                 }
@@ -491,9 +504,9 @@ public class Mech extends ApplicationAdapter implements InputProcessor, MenuCons
             drag.type=DragType.PAN;
         }
         Vector2 moveWorld = worldMove(drag);
-        cam.position.x = drag.startCamPosition.x - moveWorld.x;
-        cam.position.y = drag.startCamPosition.y + moveWorld.y;
-        cam.update();
+        _camera.position.x = drag.startCamPosition.x - moveWorld.x;
+        _camera.position.y = drag.startCamPosition.y + moveWorld.y;
+        _camera.update();
         drag.type=DragType.PAN;
         return true;
     }
@@ -511,7 +524,7 @@ public class Mech extends ApplicationAdapter implements InputProcessor, MenuCons
     }
     private int countPanOrZoomDrags(){
         int count=0;
-        for(Drag d:drags.values()){
+        for(Drag d: _drags.values()){
             if(d.type==DragType.PAN || d.type==DragType.ZOOM){
                 count++;
             }
@@ -523,7 +536,7 @@ public class Mech extends ApplicationAdapter implements InputProcessor, MenuCons
             return false;
         }
         Drag drag1=null,drag2=null;
-        for(Drag d:drags.values()){
+        for(Drag d: _drags.values()){
             if(d.type==DragType.PAN || d.type==DragType.ZOOM){
                 if(drag1==null)drag1=d;else drag2=d;
             }
@@ -536,12 +549,12 @@ public class Mech extends ApplicationAdapter implements InputProcessor, MenuCons
         }
         Vector2 moveWorld1 = worldMove(drag1);
         Vector2 moveWorld2 = worldMove(drag2);
-        cam.position.x = drag.startCamPosition.x - (moveWorld1.x + moveWorld2.x)/2;
-        cam.position.y = drag.startCamPosition.y + (moveWorld1.y + moveWorld2.y)/2;
+        _camera.position.x = drag.startCamPosition.x - (moveWorld1.x + moveWorld2.x)/2;
+        _camera.position.y = drag.startCamPosition.y + (moveWorld1.y + moveWorld2.y)/2;
         float zoom = drag1.screenPix.dst(drag2.screenPix) / drag1.startScreenPix.dst(drag2.startScreenPix);
-        cam.viewportWidth = drag.startViewportWidth / zoom;
-        cam.viewportHeight = cam.viewportWidth * Gdx.graphics.getHeight() / Gdx.graphics.getWidth();
-        cam.update();
+        _camera.viewportWidth = drag.startViewportWidth / zoom;
+        _camera.viewportHeight = _camera.viewportWidth * Gdx.graphics.getHeight() / Gdx.graphics.getWidth();
+        _camera.update();
         return true;
     }
     private Vector2 worldMove(Drag drag){
@@ -562,7 +575,7 @@ public class Mech extends ApplicationAdapter implements InputProcessor, MenuCons
 
     @Override
     public void onSliderValueChanged(float value) {
-        for(Drag drag:drags.values()) {
+        for(Drag drag: _drags.values()) {
             if(drag.startDrawable instanceof Slide) {
                 Slide slide=(Slide)drag.startDrawable;
                 for (Object o : _selection) {
@@ -572,6 +585,38 @@ public class Mech extends ApplicationAdapter implements InputProcessor, MenuCons
                         drive.length=value;
                     }
                 }
+            }
+        }
+    }
+
+    private boolean delete(Drag drag){
+        if(_properties.tool!=Tool.DELETE){
+            return false;
+        }
+        if(drag.startDrawable!=null){
+            delete(drag.startDrawable);
+        }
+        return true;
+    }
+    private void delete(Drawable drawable){
+        if(drawable instanceof Node){
+            Node node=(Node)drawable;
+            _nodes.remove(node);
+            for(Edge edge:new ArrayList<Edge>(_edges)){
+                if(edge.node1()==node || edge.node2()==node){
+                    _edges.remove(edge);
+                }
+            }
+        }
+        if(drawable instanceof Edge){
+            Edge edge=(Edge)drawable;
+            _edges.remove(edge);
+        }
+        if(drawable instanceof Slide){
+            Slide slide=(Slide)drawable;
+            _slides.remove(slide);
+            for(Edge edge:new ArrayList<Edge>(_edges)){
+                edge.removeDrives(slide);
             }
         }
     }

@@ -187,7 +187,18 @@ public class Edge implements Drawable {
     public void render(ShapeRenderer renderer){
         renderer.begin(ShapeRenderer.ShapeType.Filled);
         Util.setRendererColor(renderer, _color);
-        renderer.rectLine(start,end,.1f);
+        float width=.1f;
+        renderer.rectLine(start,end,width);
+        renderer.end();
+    }
+    public static void renderFloatingEdge(ShapeRenderer renderer, Node startNode, Vector2 end, Color color){
+        Vector2 pos1 = startNode.getBody().getPosition();
+        Vector2 dir = new Vector2(end).sub(pos1).setLength(1f);
+        Vector2 start = new Vector2(pos1).add(new Vector2(dir).scl(startNode.getRadius()));
+        renderer.begin(ShapeRenderer.ShapeType.Filled);
+        Util.setRendererColor(renderer, color);
+        float width=.1f;
+        renderer.rectLine(start,end,width);
         renderer.end();
     }
     public void renderSelection(ShapeRenderer renderer){
@@ -206,7 +217,7 @@ public class Edge implements Drawable {
             }
         }else renderer.setColor(.3f,.3f,.3f,1);
         float width = .1f;
-        float margin =  .3f * worldMeterPerScreenCm();
+        float margin =  .2f * worldMeterPerScreenCm();
         renderer.rectLine(start,end,width+2*margin);
         renderer.circle(start.x,start.y,width/2+margin,64);
         renderer.circle(end.x,end.y,width/2+margin,64);
@@ -247,5 +258,12 @@ public class Edge implements Drawable {
     private float worldMeterPerScreenCm() {
         float pixPerScreenCm = Gdx.graphics.getPpcX();
         return pixPerScreenCm / pixPerWorldMeter();
+    }
+    public void removeDrives(Slide slide) {
+        for (Drive drive : new ArrayList<Drive>(_drives)) {
+            if(drive.slide==slide){
+                _drives.remove(drive);
+            }
+        }
     }
 }
