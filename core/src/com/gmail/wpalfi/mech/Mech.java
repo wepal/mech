@@ -205,7 +205,7 @@ public class Mech extends ApplicationAdapter implements InputProcessor, MenuCons
         int y1=(int)Math.ceil(cam.position.y+cam.viewportHeight/2);
         Gdx.gl.glEnable(GL20.GL_BLEND);
         renderer.begin(ShapeRenderer.ShapeType.Line);
-        renderer.setColor(1,1,1,0.25f);
+        renderer.setColor(.5f,.5f,.5f,0.25f);
         for(int x=x0;x<=x1;x++) {
             renderer.line(x,y0,x,y1);
         }
@@ -273,6 +273,7 @@ public class Mech extends ApplicationAdapter implements InputProcessor, MenuCons
 
     @Override
     public boolean touchDown(int screenX, int screenY, int pointer, int button) {
+        finishDragOrZoom();
         if (_toolBar.touchDown(screenX, screenY, pointer, button)) {
             return true;
         }
@@ -292,10 +293,15 @@ public class Mech extends ApplicationAdapter implements InputProcessor, MenuCons
         drag.start = new Vector2(mousePos);
         drag.startDrawable=hitTest(mousePos);
         if(drag.startDrawable instanceof Slide) {
+            drag.type=DragType.SLIDE;
             Slide slide=(Slide)drag.startDrawable;
             slide.touchDown(mousePos);
             _selection.clear();
             onSelectionChanged();
+        }
+        if(_properties.tool==Tool.EDGE
+                && drag.startDrawable instanceof Node){
+            drag.type=DragType.DRAWEDGE;
         }
         drags.put(pointer, drag);
         return true;
@@ -325,20 +331,32 @@ public class Mech extends ApplicationAdapter implements InputProcessor, MenuCons
         }
         Drag drag=drags.get(pointer);
         drag.end=mousePos;
+        drag.screenPix=new Vector2(screenX,screenY);
         drag.endDrawable=hitTest(mousePos);
         dragEnd(drag);
         drags.remove(pointer);
         return true;
     }
-
+    private void finishDragOrZoom(){
+        for(Drag drag:drags.values()) {
+            if (drag.type==DragType.PAN || drag.type==DragType.ZOOM) {
+                drag.startDrawable = null;
+                drag.startScreenPix = new Vector2(drag.screenPix);
+                drag.startCamPosition = new Vector3(cam.position);
+                drag.startViewportWidth = cam.viewportWidth;
+            }
+        }
+    }
     private void dragEnd(Drag drag) {
-        if(drag.startDrawable instanceof Slide){
+        if(drag.type==DragType.PAN||drag.type==DragType.ZOOM){
+            finishDragOrZoom();
+        }
+        if(drag.type==DragType.SLIDE){
             Slide slide = (Slide)drag.startDrawable;
             slide.touchUp(drag.end);
             return;
         }
-        if(_properties.tool==Tool.EDGE
-                && drag.startDrawable instanceof Node
+        if(drag.type==DragType.DRAWEDGE
                 && drag.endDrawable instanceof Node) {
             Node start =(Node)drag.startDrawable;
             Node end=(Node)drag.endDrawable;
@@ -346,7 +364,7 @@ public class Mech extends ApplicationAdapter implements InputProcessor, MenuCons
             return;
         }
         //tap
-        if(drag.allowTap) {
+        if(drag.type==DragType.UNDEFINED) {
             if (draw(drag)) {
                 return;
             }
@@ -434,12 +452,15 @@ public class Mech extends ApplicationAdapter implements InputProcessor, MenuCons
         if(drags.containsKey(pointer)){
             Drag drag = drags.get(pointer);
             drag.screenPix=new Vector2(screenX,screenY);
-            float minMovePix = 0.5f * Gdx.graphics.getPpcX();
+            float minMovePix = 0.1f * Gdx.graphics.getPpcX();
             float distPix = drag.screenPix.dst(drag.startScreenPix);
-            if(distPix>=minMovePix) {
-                drag.allowTap=false;
+            if(drag.type==DragType.UNDEFINED && distPix>=minMovePix) {
+                if(isZoomGesture(drag))
+                    drag.type=DragType.ZOOM;
+                else
+                    drag.type=DragType.PAN;
             }
-            if(drag.startDrawable instanceof Slide){
+            if(drag.type == DragType.SLIDE){
                 Slide slide = (Slide)drag.startDrawable;
                 slide.touchDragged(mousePos);
                 return true;
@@ -456,33 +477,57 @@ public class Mech extends ApplicationAdapter implements InputProcessor, MenuCons
     }
 
     private boolean pan(Drag drag){
-        if(drag.allowTap) {
+        if(!isPanGesture(drag)) {
             return false;
         }
-        if(drags.size()!=1) {
-            return false;
-        }
-        if(drag.startDrawable instanceof Slide) {
-            return false;
+        if(drag.type!=DragType.PAN){
+            //new pan
+            finishDragOrZoom();
+            drag.type=DragType.PAN;
         }
         Vector2 moveWorld = worldMove(drag);
         cam.position.x = drag.startCamPosition.x - moveWorld.x;
         cam.position.y = drag.startCamPosition.y + moveWorld.y;
         cam.update();
-        drag.allowTap=false;
+        drag.type=DragType.PAN;
         return true;
     }
+    private boolean isZoomGesture(Drag drag){
+        if (!(drag.type==DragType.PAN || drag.type==DragType.ZOOM)) {
+            return false;
+        }
+        return countPanOrZoomDrags()==2;
+    }
+    private boolean isPanGesture(Drag drag){
+        if (!(drag.type==DragType.PAN || drag.type==DragType.ZOOM)) {
+            return false;
+        }
+        return countPanOrZoomDrags()==1;
+    }
+    private int countPanOrZoomDrags(){
+        int count=0;
+        for(Drag d:drags.values()){
+            if(d.type==DragType.PAN || d.type==DragType.ZOOM){
+                count++;
+            }
+        }
+        return count;
+    }
     private boolean zoom(Drag drag) {
-        if (drag.allowTap) {
+        if (!isZoomGesture(drag)) {
             return false;
         }
-        if (drags.size() != 2) {
-            return false;
+        Drag drag1=null,drag2=null;
+        for(Drag d:drags.values()){
+            if(d.type==DragType.PAN || d.type==DragType.ZOOM){
+                if(drag1==null)drag1=d;else drag2=d;
+            }
         }
-        Drag drag1 = (Drag)drags.values().toArray()[0];
-        Drag drag2 = (Drag)drags.values().toArray()[1];
-        if (drag1.startDrawable instanceof Slide || drag2.startDrawable instanceof Slide) {
-            return false;
+        if(drag1.type!=DragType.ZOOM || drag2.type!=DragType.ZOOM){
+            //new zoom
+            finishDragOrZoom();
+            drag1.type=DragType.ZOOM;
+            drag2.type=DragType.ZOOM;
         }
         Vector2 moveWorld1 = worldMove(drag1);
         Vector2 moveWorld2 = worldMove(drag2);
@@ -492,9 +537,6 @@ public class Mech extends ApplicationAdapter implements InputProcessor, MenuCons
         cam.viewportWidth = drag.startViewportWidth / zoom;
         cam.viewportHeight = cam.viewportWidth * Gdx.graphics.getHeight() / Gdx.graphics.getWidth();
         cam.update();
-        //Gdx.app.log("Mech", cam.position.x + " = "+ drag.startCamPosition.x + " - ( "+moveWorld1.x + " + "+ moveWorld2.x + " )/2");
-        drag1.allowTap=false;
-        drag2.allowTap=false;
         return true;
     }
     private Vector2 worldMove(Drag drag){

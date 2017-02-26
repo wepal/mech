@@ -191,21 +191,25 @@ public class Edge implements Drawable {
         renderer.end();
     }
     public void renderSelection(ShapeRenderer renderer){
-        renderer.begin(ShapeRenderer.ShapeType.Filled);
-        renderer.setColor(.2f,.2f,.2f,1);
-        float margin =  .3f * worldMeterPerScreenCm();
-        renderer.rectLine(start,end,.1f+2*margin);
-        renderer.end();
+        renderBackground(renderer,true,false);
     }
     public void renderDrive(ShapeRenderer renderer, boolean selected) {
+        renderBackground(renderer,true,true);
+    }
+    private void renderBackground(ShapeRenderer renderer, boolean selected, boolean drive){
         renderer.begin(ShapeRenderer.ShapeType.Filled);
-        if(selected){
-            renderer.setColor(.4f,.4f,1,1);
-        }else{
-            renderer.setColor(.1f,.1f,.5f,1);
-        }
+        if(drive) {
+            if (selected) {
+                renderer.setColor(.4f, .4f, 1, 1);
+            } else {
+                renderer.setColor(.1f, .1f, .5f, 1);
+            }
+        }else renderer.setColor(.3f,.3f,.3f,1);
+        float width = .1f;
         float margin =  .3f * worldMeterPerScreenCm();
-        renderer.rectLine(start,end,.1f+2*margin);
+        renderer.rectLine(start,end,width+2*margin);
+        renderer.circle(start.x,start.y,width/2+margin,64);
+        renderer.circle(end.x,end.y,width/2+margin,64);
         renderer.end();
     }
     //TODO: remove?

@@ -16,5 +16,5 @@ public class Drag {
     Vector2 end;
     Drawable startDrawable;
     Drawable endDrawable;
-    boolean allowTap=true;
+    DragType type=DragType.UNDEFINED;
 }
