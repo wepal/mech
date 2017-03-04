@@ -99,8 +99,9 @@ public class Edge implements Drawable {
         }
         float lengthSum=0;
         for (Drive drive : _drives) {
-            float pos = drive.slide.getPosition();
-            float length = drive.length * pos * _restLength;
+            float pos = drive.slide.getPosition(); //[-1,1]
+            float scale = (float)Math.pow(drive.length,pos);
+            float length = scale * _restLength;
             lengthSum += length;
         }
         float meanLength = lengthSum/_drives.size();

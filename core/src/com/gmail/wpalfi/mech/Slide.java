@@ -40,8 +40,8 @@ public class Slide implements Drawable{
         _camera=camera;
         _world=world;
         _home=home;
-        _start = new Vector2(pos.add(0,1));
-        _end = new Vector2(pos.add(0,-1));
+        _start = new Vector2(pos.add(0,5));
+        _end = new Vector2(pos.add(0,-5));
 
         Vector2 dist=new Vector2(_end).sub(_start);
         Vector2 homepos=new Vector2(dist).scl(home).add(_start);
@@ -93,16 +93,23 @@ public class Slide implements Drawable{
     public float getPosition(){
         Vector2 pos = new Vector2(_body.getPosition());
         pos.sub(_start);
-        Vector2 dist=new Vector2(_end).sub(_start);
-        float p = dist.dot(pos)/dist.len();
-        return p-_home;
+        Vector2 maxVec=new Vector2(_end).sub(_start);
+        float p = pos.dot(maxVec)/maxVec.len2();
+        return p - _home; //[-1,+1]
     }
 
     public void render(ShapeRenderer renderer) {
         Gdx.gl.glEnable(GL20.GL_BLEND);
+        float width = .1f;
         renderer.begin(ShapeRenderer.ShapeType.Filled);
         renderer.setColor(.5f,.5f,1f,.4f);
+
+        renderer.rectLine(_start,_end,width);
+        renderer.circle(_start.x,_start.y,width/2,64);
+        renderer.circle(_end.x,_end.y,width/2,64);
+
         Vector2 pos = _body.getPosition();
+
         renderer.circle(pos.x,pos.y,1,64);
         renderer.end();
     }

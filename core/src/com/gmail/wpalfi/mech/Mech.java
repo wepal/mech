@@ -421,7 +421,7 @@ public class Mech extends ApplicationAdapter implements InputProcessor, MenuCons
                     edge.addDrive(drive);
                 }
                 if (_dragSlider == null) {
-                    _dragSlider = new Slider(drive.length, this);
+                    _dragSlider = new Slider(drive.length-1, this);
                 }
             }
         }
@@ -582,7 +582,7 @@ public class Mech extends ApplicationAdapter implements InputProcessor, MenuCons
                     if(o instanceof Edge){
                         Edge edge=(Edge)o;
                         Drive drive = edge.getDrive(slide);
-                        drive.length=value;
+                        drive.length = 1 + value;
                     }
                 }
             }
