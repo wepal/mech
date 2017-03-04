@@ -97,15 +97,15 @@ public class Mech extends ApplicationAdapter implements InputProcessor, MenuCons
 
         Gdx.input.setInputProcessor(this);
 
-        _nodes.add(new Node(_camera, _world, 2,6,(float)0.3,Color.WHITE));
-        _nodes.add(new Node(_camera, _world, 9,5,(float)0.3,Color.WHITE));
-        _nodes.add(new Node(_camera, _world, 6,4,(float)0.3,Color.YELLOW));
+        _nodes.add(new Node(_camera, _world, new Vector2(2,6),(float)0.3,Color.WHITE));
+        _nodes.add(new Node(_camera, _world, new Vector2(9,5),(float)0.3,Color.WHITE));
+        _nodes.add(new Node(_camera, _world, new Vector2(6,4),(float)0.3,Color.YELLOW));
 
         _edges.add(new Edge(_camera, _world, _nodes.get(0), _nodes.get(1),Color.WHITE));
         _edges.add(new Edge(_camera, _world, _nodes.get(0), _nodes.get(2),Color.YELLOW));
         _edges.add(new Edge(_camera, _world, _nodes.get(1), _nodes.get(2),Color.YELLOW));
 
-        Slide slide = new Slide(_slideWorld,new Vector2(17,5),new Vector2(17,7),.33f);
+        Slide slide = new Slide(_slideCamera,_slideWorld,new Vector2(17,6),.33f);
         _slides.add(slide);
 
         Drive drive=new Drive();
@@ -142,13 +142,12 @@ public class Mech extends ApplicationAdapter implements InputProcessor, MenuCons
         gl.glClearColor(0,0,0, 1);
         gl.glClear(GL20.GL_COLOR_BUFFER_BIT);
 
-        if(_properties.useDebugRenderer){
-            _debugRenderer.render(_world, _camera.combined);
-            _debugRenderer.render(_slideWorld, _camera.combined);
-
-        }else{
+        //if(!_properties.useDebugRenderer){
             renderNormal();
-        }
+        //}else{
+            _debugRenderer.render(_world, _camera.combined);
+            _debugRenderer.render(_slideWorld, _slideCamera.combined);
+        //}
 
         _toolBar.render();
         if(_dragSlider!=null){
@@ -191,7 +190,7 @@ public class Mech extends ApplicationAdapter implements InputProcessor, MenuCons
         }
         for(Drag drag: _drags.values()){
             if(drag.type==DragType.DRAWEDGE){
-                Edge.renderFloatingEdge(_renderer,(Node)drag.startDrawable,drag.current,_properties.color);
+                Edge.renderFloatingEdge(_renderer,_camera,(Node)drag.startDrawable,drag.currentPix,_properties.color);
             }
         }
         for (Node node : _nodes) {
@@ -294,19 +293,20 @@ public class Mech extends ApplicationAdapter implements InputProcessor, MenuCons
         Vector3 mousePos3 = _camera.unproject(new Vector3(screenX, screenY, 0));
         Vector2 mousePos = new Vector2(mousePos3.x, mousePos3.y);
         Drag drag = new Drag();
-        drag.startScreenPix = new Vector2(screenX,screenY);
-        drag.screenPix=drag.startScreenPix;
+        drag.startPix = new Vector2(screenX,screenY);
+        drag.currentPix = new Vector2(drag.startPix);
         drag.startCamPosition = new Vector3(_camera.position);
         drag.startViewportWidth = _camera.viewportWidth;
-        drag.start = new Vector2(mousePos);
-        drag.current= new Vector2(mousePos);
-        drag.startDrawable=hitTest(drag.startScreenPix);
-        if(drag.startDrawable instanceof Slide) {
+        drag.startDrawable=hitTest(drag.startPix);
+        if(drag.startDrawable instanceof Slide
+                && _properties.tool!=Tool.DELETE) {
             drag.type=DragType.SLIDE;
             Slide slide=(Slide)drag.startDrawable;
-            slide.touchDown(mousePos);
-            _selection.clear();
-            onSelectionChanged();
+            if(!slide.isDragging()) {
+                slide.touchDown(drag.currentPix);
+                _selection.clear();
+                onSelectionChanged();
+            }
         }
         if(_properties.tool==Tool.EDGE
                 && drag.startDrawable instanceof Node){
@@ -339,9 +339,8 @@ public class Mech extends ApplicationAdapter implements InputProcessor, MenuCons
             return true;
         }
         Drag drag= _drags.get(pointer);
-        drag.end=mousePos;
-        drag.screenPix=new Vector2(screenX,screenY);
-        drag.endDrawable=hitTest(drag.screenPix);
+        drag.endPix=new Vector2(drag.currentPix);
+        drag.endDrawable=hitTest(drag.endPix);
         dragEnd(drag);
         _drags.remove(pointer);
         return true;
@@ -350,7 +349,7 @@ public class Mech extends ApplicationAdapter implements InputProcessor, MenuCons
         for(Drag drag: _drags.values()) {
             if (drag.type==DragType.PAN || drag.type==DragType.ZOOM) {
                 drag.startDrawable = null;
-                drag.startScreenPix = new Vector2(drag.screenPix);
+                drag.startPix = new Vector2(drag.currentPix);
                 drag.startCamPosition = new Vector3(_camera.position);
                 drag.startViewportWidth = _camera.viewportWidth;
             }
@@ -363,7 +362,7 @@ public class Mech extends ApplicationAdapter implements InputProcessor, MenuCons
         }
         if(drag.type==DragType.SLIDE){
             Slide slide = (Slide)drag.startDrawable;
-            slide.touchUp(drag.end);
+            slide.touchUp(drag.endPix);
             return;
         }
         if(drag.type==DragType.DRAWEDGE
@@ -432,18 +431,20 @@ public class Mech extends ApplicationAdapter implements InputProcessor, MenuCons
         if(drag.startDrawable!=null){
             return false;
         }
-        float maxDist = .2f * worldMeterPerScreenCm();
-        float dist = drag.end.dst(drag.start);
-        if(dist>maxDist){
+        float maxDistPix = .2f / Gdx.graphics.getPpcX();
+        float distPix = drag.endPix.dst(drag.startPix);
+        if(distPix>maxDistPix){
             return false;
         }
         if(_properties.tool==Tool.NODE){
-            Node node=new Node(_camera, _world, drag.end.x,drag.end.y,_properties.radius,_properties.color);
+            Vector2 pos = Util.unproject(_camera, drag.startPix);
+            Node node=new Node(_camera, _world, pos,_properties.radius,_properties.color);
             _nodes.add(node);
             return true;
         }
         if(_properties.tool==Tool.SLIDE){
-            Slide slide = new Slide(_slideWorld, new Vector2(drag.end).add(0,1), new Vector2(drag.end).add(0,-1),.5f);
+            Vector2 pos = Util.unproject(_slideCamera, drag.startPix);
+            Slide slide = new Slide(_slideCamera, _slideWorld, pos,.5f);
             _slides.add(slide);
             return true;
         }
@@ -464,10 +465,9 @@ public class Mech extends ApplicationAdapter implements InputProcessor, MenuCons
         }
         if(_drags.containsKey(pointer)){
             Drag drag = _drags.get(pointer);
-            drag.screenPix=new Vector2(screenX,screenY);
-            drag.current= new Vector2(mousePos);
+            drag.currentPix=new Vector2(screenX,screenY);
             float minMovePix = 0.1f * Gdx.graphics.getPpcX();
-            float distPix = drag.screenPix.dst(drag.startScreenPix);
+            float distPix = drag.currentPix.dst(drag.startPix);
             if(drag.type==DragType.UNDEFINED && distPix>=minMovePix) {
                 for(Drag d: _drags.values()){
                     if(d.type==DragType.UNDEFINED)
@@ -480,7 +480,7 @@ public class Mech extends ApplicationAdapter implements InputProcessor, MenuCons
             }
             if(drag.type == DragType.SLIDE){
                 Slide slide = (Slide)drag.startDrawable;
-                slide.touchDragged(mousePos);
+                slide.touchDragged(drag.currentPix);
                 return true;
             }
             if(pan(drag)){
@@ -551,14 +551,14 @@ public class Mech extends ApplicationAdapter implements InputProcessor, MenuCons
         Vector2 moveWorld2 = worldMove(drag2);
         _camera.position.x = drag.startCamPosition.x - (moveWorld1.x + moveWorld2.x)/2;
         _camera.position.y = drag.startCamPosition.y + (moveWorld1.y + moveWorld2.y)/2;
-        float zoom = drag1.screenPix.dst(drag2.screenPix) / drag1.startScreenPix.dst(drag2.startScreenPix);
+        float zoom = drag1.currentPix.dst(drag2.currentPix) / drag1.startPix.dst(drag2.startPix);
         _camera.viewportWidth = drag.startViewportWidth / zoom;
         _camera.viewportHeight = _camera.viewportWidth * Gdx.graphics.getHeight() / Gdx.graphics.getWidth();
         _camera.update();
         return true;
     }
     private Vector2 worldMove(Drag drag){
-        Vector2 movePix = new Vector2(drag.screenPix).sub(drag.startScreenPix);
+        Vector2 movePix = new Vector2(drag.currentPix).sub(drag.startPix);
         Vector2 moveWorld = new Vector2(movePix).scl(1/pixPerWorldMeter());
         return moveWorld;
     }
@@ -604,16 +604,19 @@ public class Mech extends ApplicationAdapter implements InputProcessor, MenuCons
             _nodes.remove(node);
             for(Edge edge:new ArrayList<Edge>(_edges)){
                 if(edge.node1()==node || edge.node2()==node){
-                    _edges.remove(edge);
+                    delete(edge);
                 }
             }
+            node.destroy();
         }
         if(drawable instanceof Edge){
             Edge edge=(Edge)drawable;
+            edge.destroy();
             _edges.remove(edge);
         }
         if(drawable instanceof Slide){
             Slide slide=(Slide)drawable;
+            slide.destroy();
             _slides.remove(slide);
             for(Edge edge:new ArrayList<Edge>(_edges)){
                 edge.removeDrives(slide);

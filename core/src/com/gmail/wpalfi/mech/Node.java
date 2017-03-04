@@ -2,6 +2,7 @@ package com.gmail.wpalfi.mech;
 
 import com.badlogic.gdx.Gdx;
 import com.badlogic.gdx.graphics.Camera;
+import com.badlogic.gdx.graphics.OrthographicCamera;
 import com.badlogic.gdx.graphics.glutils.ShapeRenderer;
 import com.badlogic.gdx.math.Matrix4;
 import com.badlogic.gdx.math.Vector2;
@@ -13,26 +14,27 @@ import com.badlogic.gdx.physics.box2d.FixtureDef;
 import com.badlogic.gdx.physics.box2d.World;
 
 public class Node implements Drawable{
-    private Camera _camera;
-    private float _x,_y;
+    private World _world;
+    private OrthographicCamera _camera;
+    private Vector2 _startPos;
     private float _weight = 1;
     private float _radius = 1;
     private Color _color;
     private Body _body;
     private Fixture _fixture;
 
-    public Node(Camera camera, World world, float x_, float y_, float radius_, Color color_) {
+    public Node(OrthographicCamera camera, World world, Vector2 startPos, float radius_, Color color_) {
         _camera=camera;
-        _x=x_;
-        _y=y_;
+        _world=world;
+        _startPos = startPos;
         _radius=radius_;
         _color=color_;
 
 
         BodyDef bd = new BodyDef();
         // bd.isBullet = true;
-        bd.allowSleep = true;
-        bd.position.set(_x, _y);
+        bd.allowSleep = false;
+        bd.position.set(_startPos.x, _startPos.y);
         //bd.fixedRotation = true;
         _body = world.createBody(bd);
         _body.setType(BodyDef.BodyType.DynamicBody);
@@ -110,6 +112,8 @@ public class Node implements Drawable{
         float pixPerScreenCm = Gdx.graphics.getPpcX();
         return pixPerScreenCm / pixPerWorldMeter();
     }
-
+    public void destroy(){
+        _world.destroyBody(_body);
+    }
 }
 

@@ -9,7 +9,7 @@ public class Properties {
     Color color=Color.WHITE;
     Tool tool=Tool.NODE;
     boolean pause=false;
-    boolean useDebugRenderer=false;
+    boolean useDebugRenderer=true;
 
     public Properties(){
     }

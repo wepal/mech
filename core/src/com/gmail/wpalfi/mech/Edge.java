@@ -2,6 +2,7 @@ package com.gmail.wpalfi.mech;
 
 import com.badlogic.gdx.Gdx;
 import com.badlogic.gdx.graphics.Camera;
+import com.badlogic.gdx.graphics.OrthographicCamera;
 import com.badlogic.gdx.graphics.glutils.ShapeRenderer;
 import com.badlogic.gdx.math.MathUtils;
 import com.badlogic.gdx.math.Vector2;
@@ -51,7 +52,7 @@ public class Edge implements Drawable {
         Vector2 p2=_node2.getBody().getPosition();
         distJointDef.initialize(_node1.getBody(), _node2.getBody(), p1, p2);
         distJointDef.dampingRatio=1;
-        distJointDef.frequencyHz=10f;//2f;
+        distJointDef.frequencyHz=40f;//2f;
         _distanceJoint = (DistanceJoint) world.createJoint(distJointDef);
         _restLength = distJointDef.length;
 
@@ -63,10 +64,12 @@ public class Edge implements Drawable {
         BodyDef bd1 = new BodyDef();
         bd1.position.set(p1);
         bd1.angle = angle;
+        bd1.allowSleep = false;
         _body1 = world.createBody(bd1);
         BodyDef bd2 = new BodyDef();
         bd2.position.set(p2);
         bd2.angle = angle+MathUtils.PI;
+        bd2.allowSleep = false;
         _body2 = world.createBody(bd2);
         BodyDef.BodyType bodyType = _color==Color.WHITE ? BodyDef.BodyType.StaticBody : BodyDef.BodyType.DynamicBody;
         _body1.setType(bodyType);
@@ -110,16 +113,23 @@ public class Edge implements Drawable {
             _body2.destroyFixture(_fixture2);
         }
         float w=_length*.75f;
-        Vector2[] vertices=new Vector2[4];
-        vertices[0]=new Vector2(0,-.1f);
-        vertices[1]=new Vector2(0,+.1f);
-        vertices[2]=new Vector2(w,+.1f);
-        vertices[3]=new Vector2(w,-.1f);
+        float r1 = _node1.getRadius();
+        float r2 = _node2.getRadius();
+        float[] vertices1={
+                r1+0,-.1f,
+                r1+0,+.1f,
+                r1+w,+.1f,
+                r1+w,-.1f};
+        float[] vertices2={
+                r2+0,-.1f,
+                r2+0,+.1f,
+                r2+w,+.1f,
+                r2+w,-.1f};
 
         PolygonShape shape1 = new PolygonShape();
-        shape1.set(vertices);
+        shape1.set(vertices1);
         PolygonShape shape2 = new PolygonShape();
-        shape2.set(vertices);
+        shape2.set(vertices2);
 
         FixtureDef fdef1 = new FixtureDef();
         fdef1.shape = shape1;
@@ -148,9 +158,9 @@ public class Edge implements Drawable {
         dir = new Vector2(pos2).sub(pos1).setLength(1f);
         start = new Vector2(pos1).add(new Vector2(dir).scl(_node1.getRadius()));
         end = new Vector2(pos2).add(new Vector2(dir).scl(-_node2.getRadius()));
-        _length = pos1.dst(pos2);
+        _length = start.dst(end);
 
-        if(Math.abs((_length- _lastUpdateLength)/ _lastUpdateLength)>.1){
+        if(Math.abs((_length- _lastUpdateLength)/ _lastUpdateLength)>.01){
             updateFixtures();
         }
 
@@ -191,7 +201,8 @@ public class Edge implements Drawable {
         renderer.rectLine(start,end,width);
         renderer.end();
     }
-    public static void renderFloatingEdge(ShapeRenderer renderer, Node startNode, Vector2 end, Color color){
+    public static void renderFloatingEdge(ShapeRenderer renderer, OrthographicCamera camera, Node startNode, Vector2 endPix, Color color){
+        Vector2 end = Util.unproject(camera,endPix);
         Vector2 pos1 = startNode.getBody().getPosition();
         Vector2 dir = new Vector2(end).sub(pos1).setLength(1f);
         Vector2 start = new Vector2(pos1).add(new Vector2(dir).scl(startNode.getRadius()));
@@ -265,5 +276,10 @@ public class Edge implements Drawable {
                 _drives.remove(drive);
             }
         }
+    }
+    public void destroy(){
+        _world.destroyBody(_body1);
+        _world.destroyBody(_body2);
+        _world.destroyJoint(_distanceJoint);
     }
 }

@@ -9,6 +9,7 @@ import java.util.ArrayList;
 
 import com.badlogic.gdx.Gdx;
 import com.badlogic.gdx.graphics.GL20;
+import com.badlogic.gdx.graphics.OrthographicCamera;
 import com.badlogic.gdx.graphics.glutils.ShapeRenderer;
 import com.badlogic.gdx.math.Vector2;
 import com.badlogic.gdx.math.Vector3;
@@ -25,7 +26,7 @@ import com.badlogic.gdx.physics.box2d.joints.PrismaticJoint;
 import com.badlogic.gdx.physics.box2d.joints.PrismaticJointDef;
 
 public class Slide implements Drawable{
-
+    private OrthographicCamera _camera;
     private Vector2 _start, _end;
     private float _home;
     private Body _body;
@@ -35,12 +36,12 @@ public class Slide implements Drawable{
     private World _world;
     private MouseJoint _mouseJoint;
 
-    public Slide(World world, Vector2 start, Vector2 end, float home) {
-
+    public Slide(OrthographicCamera camera, World world, Vector2 pos, float home) {
+        _camera=camera;
         _world=world;
-        _start=new Vector2(start);
-        _end=new Vector2(end);
         _home=home;
+        _start = new Vector2(pos.add(0,1));
+        _end = new Vector2(pos.add(0,-1));
 
         Vector2 dist=new Vector2(_end).sub(_start);
         Vector2 homepos=new Vector2(dist).scl(home).add(_start);
@@ -113,26 +114,37 @@ public class Slide implements Drawable{
         return dist;
     }
 
-    public void touchDown(Vector2 mousePos) {
+    public void touchDown(Vector2 mousePix) {
+        Vector2 pos=Util.unproject(_camera,mousePix);
         MouseJointDef defJoint = new MouseJointDef();
         defJoint.maxForce = 10000000 * _body.getMass();
         //defJoint.dampingRatio=1;
         //defJoint.frequencyHz=1000f;
         defJoint.bodyA = _homeBody;
         defJoint.bodyB = _body;
-        defJoint.target.set(mousePos.x, mousePos.y);
+        defJoint.target.set(pos.x, pos.y);
         _mouseJoint = (MouseJoint) _world.createJoint(defJoint);
         _world.destroyJoint(_pullBackJoint);
         _pullBackJoint=null;
     }
 
-    public void touchUp(Vector2 mousePos) {
+    public void touchUp(Vector2 mousePix) {
         _world.destroyJoint(_mouseJoint);
         _mouseJoint=null;
         createPullBackJoint();
     }
 
-    public void touchDragged(Vector2 mousePos){
-        _mouseJoint.setTarget(mousePos);
+    public void touchDragged(Vector2 mousePix){
+        Vector2 pos=Util.unproject(_camera,mousePix);
+        _mouseJoint.setTarget(pos);
     }
+
+    public boolean isDragging(){
+        return _mouseJoint!=null;
+    }
+    public void destroy(){
+        _world.destroyBody(_body);
+        _world.destroyBody(_homeBody);
+    }
+
 }
