@@ -14,6 +14,7 @@ public class Drag {
     Vector3 startCamPosition;
     float startViewportWidth;
     Drawable startDrawable;
+    Drawable currentDrawable;
     Drawable endDrawable;
     DragType type=DragType.UNDEFINED;
 }

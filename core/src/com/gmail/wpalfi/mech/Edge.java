@@ -36,9 +36,6 @@ public class Edge implements Drawable {
     private PrismaticJoint _prismaticJoint;
     private float _lastUpdateLength;
     private List<Drive> _drives=new ArrayList<Drive>();
-    //cached
-    private Vector2 pos1,pos2,dir,start,end;
-    private float _length;
 
     public Edge(Camera camera, World world, Node node1, Node node2, Color color){
         _camera=camera;
@@ -52,7 +49,7 @@ public class Edge implements Drawable {
         Vector2 p2=_node2.getBody().getPosition();
         distJointDef.initialize(_node1.getBody(), _node2.getBody(), p1, p2);
         distJointDef.dampingRatio=1;
-        distJointDef.frequencyHz=40f;//2f;
+        distJointDef.frequencyHz=40f;
         _distanceJoint = (DistanceJoint) world.createJoint(distJointDef);
         _restLength = distJointDef.length;
 
@@ -89,7 +86,6 @@ public class Edge implements Drawable {
         prismaticJointDef.initialize(_body1,_body2,center,axis);
         _prismaticJoint=(PrismaticJoint)world.createJoint(prismaticJointDef);
 
-
         update();
     }
 
@@ -113,19 +109,19 @@ public class Edge implements Drawable {
             _body1.destroyFixture(_fixture1);
             _body2.destroyFixture(_fixture2);
         }
-        float w=_length*.75f;
-        float r1 = _node1.getRadius();
-        float r2 = _node2.getRadius();
+        float length = currentLength();
+        float len=length*.75f;
+        float w = 0.1f * worldMeterPerScreenCm();
         float[] vertices1={
-                r1+0,-.1f,
-                r1+0,+.1f,
-                r1+w,+.1f,
-                r1+w,-.1f};
+                0,-w,
+                0,+w,
+                len,+w,
+                len,-w};
         float[] vertices2={
-                r2+0,-.1f,
-                r2+0,+.1f,
-                r2+w,+.1f,
-                r2+w,-.1f};
+                0,-w,
+                0,+w,
+                len,+w,
+                len,-w};
 
         PolygonShape shape1 = new PolygonShape();
         shape1.set(vertices1);
@@ -150,22 +146,21 @@ public class Edge implements Drawable {
         fdef1.filter.maskBits = 0x0001;
         _fixture2 = _body2.createFixture(fdef2);
 
-        _lastUpdateLength = _length;
+        _lastUpdateLength = length;
     }
 
-    public void update(){
-        pos1 = _node1.getBody().getPosition();
-        pos2 = _node2.getBody().getPosition();
-        dir = new Vector2(pos2).sub(pos1).setLength(1f);
-        start = new Vector2(pos1).add(new Vector2(dir).scl(_node1.getRadius()));
-        end = new Vector2(pos2).add(new Vector2(dir).scl(-_node2.getRadius()));
-        _length = start.dst(end);
 
-        if(Math.abs((_length- _lastUpdateLength)/ _lastUpdateLength)>.01){
+    public void update(){
+        float length = currentLength();
+        if(Math.abs((length - _lastUpdateLength)/ _lastUpdateLength)>.01){
             updateFixtures();
         }
-
         updateLength();
+    }
+    public float currentLength(){
+        Vector2 pos1 = _node1.getBody().getPosition();
+        Vector2 pos2 = _node2.getBody().getPosition();
+        return pos1.dst(pos2);
     }
     public float getRestLength(){
         return _restLength;
@@ -184,55 +179,29 @@ public class Edge implements Drawable {
     }
     @Override
     public float hitTest(Vector2 pos){
-        Vector2 d = new Vector2(pos).sub(start);
+        Vector2 pos1 = _node1.getBody().getPosition();
+        Vector2 pos2 = _node2.getBody().getPosition();
+        Vector2 dir = new Vector2(pos2).sub(pos1).nor();
+        Vector2 d = new Vector2(pos).sub(pos1);
         float x = d.dot(dir);
         float y = new Vector2(d).sub(new Vector2(dir).scl(x)).len();
-        float len = start.dst(end);
+        float len = pos1.dst(pos2);
         float xdist = Math.max(0-x,x-len);
         xdist=Math.max(0,xdist);
         float ydist = Math.max(y-.1f,-.1f-y);
         ydist=Math.max(0,ydist);
         return (float)Math.sqrt(xdist*xdist+ydist*ydist);
     }
-    @Override
+
     public void render(ShapeRenderer renderer){
+        Vector2 pos1 = _node1.getBody().getPosition();
+        Vector2 pos2 = _node2.getBody().getPosition();
         renderer.begin(ShapeRenderer.ShapeType.Filled);
         Util.setRendererColor(renderer, _color);
-        float width=.1f;
-        renderer.rectLine(start,end,width);
-        renderer.end();
-    }
-    public static void renderFloatingEdge(ShapeRenderer renderer, OrthographicCamera camera, Node startNode, Vector2 endPix, Color color){
-        Vector2 end = Util.unproject(camera,endPix);
-        Vector2 pos1 = startNode.getBody().getPosition();
-        Vector2 dir = new Vector2(end).sub(pos1).setLength(1f);
-        Vector2 start = new Vector2(pos1).add(new Vector2(dir).scl(startNode.getRadius()));
-        renderer.begin(ShapeRenderer.ShapeType.Filled);
-        Util.setRendererColor(renderer, color);
-        float width=.1f;
-        renderer.rectLine(start,end,width);
-        renderer.end();
-    }
-    public void renderSelection(ShapeRenderer renderer){
-        renderBackground(renderer,true,false);
-    }
-    public void renderDrive(ShapeRenderer renderer, boolean selected) {
-        renderBackground(renderer,true,true);
-    }
-    private void renderBackground(ShapeRenderer renderer, boolean selected, boolean drive){
-        renderer.begin(ShapeRenderer.ShapeType.Filled);
-        if(drive) {
-            if (selected) {
-                renderer.setColor(.4f, .4f, 1, 1);
-            } else {
-                renderer.setColor(.1f, .1f, .5f, 1);
-            }
-        }else renderer.setColor(.3f,.3f,.3f,1);
-        float width = .1f;
-        float margin =  .2f * worldMeterPerScreenCm();
-        renderer.rectLine(start,end,width+2*margin);
-        renderer.circle(start.x,start.y,width/2+margin,64);
-        renderer.circle(end.x,end.y,width/2+margin,64);
+        float width = .05f * worldMeterPerScreenCm();
+        renderer.rectLine(pos1,pos2,width);
+        renderer.circle(pos1.x,pos1.y,width/2,8);
+        renderer.circle(pos2.x,pos2.y,width/2,8);
         renderer.end();
     }
     //TODO: remove?

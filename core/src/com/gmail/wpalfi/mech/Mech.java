@@ -45,24 +45,9 @@ public class Mech extends ApplicationAdapter implements InputProcessor, MenuCons
     public void setColor(Color color){
         _properties.color = color;
         for (Object o : _selection) {
-            if(o instanceof Node){
-                Node node=(Node)o;
-                node.setColor(color);
-            }
             if(o instanceof Edge){
                 Edge edge=(Edge)o;
                 edge.setColor(color);
-            }
-        }
-    }
-
-    @Override
-    public void setRadius(float radius){
-        _properties.radius=radius;
-        for (Object o : _selection) {
-            if(o instanceof Node){
-                Node node=(Node)o;
-                node.setRadius(radius);
             }
         }
     }
@@ -97,9 +82,9 @@ public class Mech extends ApplicationAdapter implements InputProcessor, MenuCons
 
         Gdx.input.setInputProcessor(this);
 
-        _nodes.add(new Node(_camera, _world, new Vector2(2,6),(float)0.3,Color.WHITE));
-        _nodes.add(new Node(_camera, _world, new Vector2(9,5),(float)0.3,Color.WHITE));
-        _nodes.add(new Node(_camera, _world, new Vector2(6,4),(float)0.3,Color.YELLOW));
+        _nodes.add(new Node(_camera, _world, new Vector2(2,6)));
+        _nodes.add(new Node(_camera, _world, new Vector2(9,5)));
+        _nodes.add(new Node(_camera, _world, new Vector2(6,4)));
 
         _edges.add(new Edge(_camera, _world, _nodes.get(0), _nodes.get(1),Color.WHITE));
         _edges.add(new Edge(_camera, _world, _nodes.get(0), _nodes.get(2),Color.YELLOW));
@@ -145,8 +130,8 @@ public class Mech extends ApplicationAdapter implements InputProcessor, MenuCons
         //if(!_properties.useDebugRenderer){
             renderNormal();
         //}else{
-            _debugRenderer.render(_world, _camera.combined);
-            _debugRenderer.render(_slideWorld, _slideCamera.combined);
+            //_debugRenderer.render(_world, _camera.combined);
+            //_debugRenderer.render(_slideWorld, _slideCamera.combined);
         //}
 
         _toolBar.render();
@@ -159,42 +144,29 @@ public class Mech extends ApplicationAdapter implements InputProcessor, MenuCons
         _renderer.setProjectionMatrix(_camera.combined);
         _slideRenderer.setProjectionMatrix(_slideCamera.combined);
         //if(_drags.isEmpty()){
-            for (Object o : _selection) {
+            /*for (Object o : _selection) {
                 if(o instanceof Node){
                     Node node=(Node)o;
-                    node.renderSelection(_renderer);
+                    node.render(_renderer);
                 }
-                if(o instanceof Edge){
-                    Edge edge=(Edge)o;
-                    edge.renderSelection(_renderer);
-                }
-            }
+            }*/
         //}
-        for (Edge edge : _edges) {
-            boolean hasDrive =false;
-            for (Drag drag: _drags.values()) {
-                if(drag.startDrawable instanceof Slide){
-                    Slide slide=(Slide)drag.startDrawable;
-                    if(edge.hasDrive(slide)){
-                        hasDrive=true;
-                    }
-                }
-            }
-            if(hasDrive){
-                edge.renderDrive(_renderer, _selection.contains(edge));
-            }
-        }
         grid();
         for (Edge edge : _edges) {
             edge.render(_renderer);
         }
-        for(Drag drag: _drags.values()){
+        /*for(Drag drag: _drags.values()){
             if(drag.type==DragType.DRAWEDGE){
                 Edge.renderFloatingEdge(_renderer,_camera,(Node)drag.startDrawable,drag.currentPix,_properties.color);
             }
-        }
+        }*/
         for (Node node : _nodes) {
-            node.render(_renderer);
+            boolean hover=false;
+            for(Drag drag :_drags.values()){
+                if(drag.startDrawable == node || drag.currentDrawable==node)
+                    hover=true;
+            }
+            node.render(_renderer, hover);
         }
         for (Slide slide : _slides) {
             slide.render(_slideRenderer);
@@ -239,17 +211,17 @@ public class Mech extends ApplicationAdapter implements InputProcessor, MenuCons
     }
 
     private Drawable hitTest(Vector2 mousePosPix) {
-        HitTestResult hitTestResult = hitTest(null, _edges, mousePosPix, _camera);
-        hitTestResult = hitTest(hitTestResult , _nodes, mousePosPix, _camera);
-        hitTestResult = hitTest(hitTestResult , _slides, mousePosPix, _slideCamera);
-        if(hitTestResult==null) {
-            return null;
-        }
         float maxDistPix = .7f * Gdx.graphics.getPpcX();
-        if(hitTestResult.distPix>maxDistPix) {
-            return null;
+        HitTestResult hitTestResult = hitTest(null, _slides, mousePosPix, _slideCamera);
+        hitTestResult = hitTest(hitTestResult , _nodes, mousePosPix, _camera);
+        if(hitTestResult!=null && hitTestResult.distPix <= maxDistPix) {
+            return hitTestResult.drawable;
         }
-        return hitTestResult.drawable;
+        hitTestResult = hitTest(null, _edges, mousePosPix, _camera);
+        if(hitTestResult!=null && hitTestResult.distPix <= maxDistPix) {
+            return hitTestResult.drawable;
+        }
+        return null;
     }
 
     private class HitTestResult {
@@ -308,19 +280,18 @@ public class Mech extends ApplicationAdapter implements InputProcessor, MenuCons
                 onSelectionChanged();
             }
         }
-        if(_properties.tool==Tool.EDGE
-                && drag.startDrawable instanceof Node){
+        if(_properties.tool==Tool.EDGE){
             drag.type=DragType.DRAWEDGE;
         }
         _drags.put(pointer, drag);
         return true;
     }
     private void onSelectionChanged(){
-        for (Object o : _selection) {
+        /*for (Object o : _selection) {
             if(o instanceof Node){
                 _properties.radius=((Node)o).getRadius();
             }
-        }
+        }*/
     }
 
     @Override
@@ -365,11 +336,19 @@ public class Mech extends ApplicationAdapter implements InputProcessor, MenuCons
             slide.touchUp(drag.endPix);
             return;
         }
-        if(drag.type==DragType.DRAWEDGE
-                && drag.endDrawable instanceof Node) {
-            Node start =(Node)drag.startDrawable;
-            Node end=(Node)drag.endDrawable;
-            _edges.add(new Edge(_camera, _world, start, end, _properties.color));
+        if(drag.type==DragType.DRAWEDGE) {
+            Node node1, node2;
+            if(drag.startDrawable instanceof Node) {
+                node1 = (Node)drag.startDrawable;
+            }else{
+                node1 = makeNode(drag.startPix);
+            }
+            if(drag.endDrawable instanceof Node) {
+                node2 = (Node)drag.endDrawable;
+            }else{
+                node2 = makeNode(drag.endPix);
+            }
+            _edges.add(new Edge(_camera, _world, node1, node2, _properties.color));
             return;
         }
         //tap
@@ -382,6 +361,12 @@ public class Mech extends ApplicationAdapter implements InputProcessor, MenuCons
             }
             select(drag);
         }
+    }
+    private Node makeNode(Vector2 pix){
+        Vector2 pos = Util.unproject(_camera,pix);
+        Node node = new Node(_camera,_world,pos);
+        _nodes.add(node);
+        return node;
     }
     private float pixPerWorldMeter() {
         return Gdx.graphics.getWidth() / _camera.viewportWidth;
@@ -436,12 +421,6 @@ public class Mech extends ApplicationAdapter implements InputProcessor, MenuCons
         if(distPix>maxDistPix){
             return false;
         }
-        if(_properties.tool==Tool.NODE){
-            Vector2 pos = Util.unproject(_camera, drag.startPix);
-            Node node=new Node(_camera, _world, pos,_properties.radius,_properties.color);
-            _nodes.add(node);
-            return true;
-        }
         if(_properties.tool==Tool.SLIDE){
             Vector2 pos = Util.unproject(_slideCamera, drag.startPix);
             Slide slide = new Slide(_slideCamera, _slideWorld, pos,.5f);
@@ -466,6 +445,7 @@ public class Mech extends ApplicationAdapter implements InputProcessor, MenuCons
         if(_drags.containsKey(pointer)){
             Drag drag = _drags.get(pointer);
             drag.currentPix=new Vector2(screenX,screenY);
+            drag.currentDrawable=hitTest(drag.currentPix);
             float minMovePix = 0.1f * Gdx.graphics.getPpcX();
             float distPix = drag.currentPix.dst(drag.startPix);
             if(drag.type==DragType.UNDEFINED && distPix>=minMovePix) {

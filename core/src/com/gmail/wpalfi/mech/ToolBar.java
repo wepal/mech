@@ -18,7 +18,7 @@ public class ToolBar implements Slider.Listener, ColorMenu.Listener {
     @Override
     public void onSliderValueChanged(float value) {
         if(_property==Property.RADIUS){
-            _menuConsumer.setRadius(value);
+            //_menuConsumer.setRadius(value);
         }
     }
 

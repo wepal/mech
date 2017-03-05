@@ -8,6 +8,4 @@ import com.badlogic.gdx.math.Vector2;
  */
 public interface Drawable {
     float hitTest(Vector2 pos);
-
-    void render(ShapeRenderer renderer);
 }

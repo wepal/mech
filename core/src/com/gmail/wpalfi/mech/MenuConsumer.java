@@ -10,7 +10,5 @@ public interface MenuConsumer {
 
     void setColor(Color color);
 
-    void setRadius(float radius);
-
     void setPause(boolean pause);
 }

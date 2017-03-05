@@ -1,110 +1,50 @@
 package com.gmail.wpalfi.mech;
 
 import com.badlogic.gdx.Gdx;
-import com.badlogic.gdx.graphics.Camera;
+import com.badlogic.gdx.graphics.GL20;
 import com.badlogic.gdx.graphics.OrthographicCamera;
 import com.badlogic.gdx.graphics.glutils.ShapeRenderer;
-import com.badlogic.gdx.math.Matrix4;
 import com.badlogic.gdx.math.Vector2;
 import com.badlogic.gdx.physics.box2d.Body;
 import com.badlogic.gdx.physics.box2d.BodyDef;
-import com.badlogic.gdx.physics.box2d.CircleShape;
-import com.badlogic.gdx.physics.box2d.Fixture;
-import com.badlogic.gdx.physics.box2d.FixtureDef;
 import com.badlogic.gdx.physics.box2d.World;
+import com.sun.org.apache.xerces.internal.impl.dv.ValidationContext;
 
 public class Node implements Drawable{
     private World _world;
     private OrthographicCamera _camera;
-    private Vector2 _startPos;
-    private float _weight = 1;
-    private float _radius = 1;
-    private Color _color;
     private Body _body;
-    private Fixture _fixture;
 
-    public Node(OrthographicCamera camera, World world, Vector2 startPos, float radius_, Color color_) {
-        _camera=camera;
+    public Node(OrthographicCamera camera, World world, Vector2 startPos) {
         _world=world;
-        _startPos = startPos;
-        _radius=radius_;
-        _color=color_;
-
-
+        _camera=camera;
         BodyDef bd = new BodyDef();
-        // bd.isBullet = true;
         bd.allowSleep = false;
-        bd.position.set(_startPos.x, _startPos.y);
-        //bd.fixedRotation = true;
+        bd.position.set(startPos.x, startPos.y);
         _body = world.createBody(bd);
         _body.setType(BodyDef.BodyType.DynamicBody);
-        updateFixture();
-    }
-
-    public void setColor(Color color){
-        _color=color;
-        updateFixture();
-    }
-
-    public void setRadius(float radius) {
-        _radius = radius;
-        updateFixture();
-    }
-
-    private void updateFixture(){
-        if(_fixture!=null){
-            _body.destroyFixture(_fixture);
-            _fixture=null;
-        }
-        CircleShape sd = new CircleShape();
-        sd.setRadius(_radius);
-
-        FixtureDef fdef = new FixtureDef();
-        fdef.shape = sd;
-        fdef.density = 1.0f;
-        fdef.friction = 0.3f;
-        fdef.restitution = 0.6f;
-
-        _fixture = _body.createFixture(fdef);
-        if(_color==Color.WHITE)
-            _body.setType(BodyDef.BodyType.StaticBody);
-        else
-            _body.setType(BodyDef.BodyType.DynamicBody);
-    }
-    public Body getBody(){
-        return _body;
-    }
-    float getRadius(){
-        return _radius;
-    }
-    Color getColor(){
-        return _color;
     }
 
     @Override
     public float hitTest(Vector2 pos) {
         Vector2 center = _body.getPosition();
-        float dist = pos.dst(center)-_radius;
-        dist = Math.max(dist,0f);
+        float dist = pos.dst(center)-radius();
+        dist=Math.max(0,dist);
         return dist;
     }
 
-    public void render(ShapeRenderer renderer) {
-        renderer.begin(ShapeRenderer.ShapeType.Line);
-        Util.setRendererColor(renderer, _color);
+    private float radius(){
+        return .5f * worldMeterPerScreenCm();
+    }
+
+    public void render(ShapeRenderer renderer, boolean hover) {
+        renderer.begin(hover ? ShapeRenderer.ShapeType.Filled : ShapeRenderer.ShapeType.Line);
+        renderer.setColor(.5f,.5f,.5f,1);
         Vector2 pos = _body.getPosition();
-        renderer.circle(pos.x,pos.y,_radius,64);
+        renderer.circle(pos.x,pos.y,radius(),64);
         renderer.end();
     }
 
-    public void renderSelection(ShapeRenderer renderer) {
-        renderer.begin(ShapeRenderer.ShapeType.Filled);
-        renderer.setColor(.3f,.3f,.3f,1);
-        Vector2 pos = _body.getPosition();
-        float margin =  .2f * worldMeterPerScreenCm();
-        renderer.circle(pos.x,pos.y,_radius+margin,64);
-        renderer.end();
-    }
     private float pixPerWorldMeter() {
         return Gdx.graphics.getWidth() / _camera.viewportWidth;
     }
@@ -112,8 +52,13 @@ public class Node implements Drawable{
         float pixPerScreenCm = Gdx.graphics.getPpcX();
         return pixPerScreenCm / pixPerWorldMeter();
     }
+
     public void destroy(){
         _world.destroyBody(_body);
+    }
+
+    public Body getBody(){
+        return _body;
     }
 }
 
