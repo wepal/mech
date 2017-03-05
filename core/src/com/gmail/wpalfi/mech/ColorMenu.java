@@ -13,7 +13,6 @@ import java.util.List;
 public class ColorMenu {
     private float _backgroundX,_backgroundY,_backgroundWidth,_backgroundHeight;
     private Color _value;
-    private List<Color> _colors = new ArrayList<Color>();
     private float _buttonWidth = 50;
     private float _padding = 30;
     private float _margin = 25;
@@ -24,11 +23,8 @@ public class ColorMenu {
         _value=value;
         _listener=listener;
         _renderer = new ShapeRenderer();
-        _colors.add(Color.WHITE);
-        _colors.add(Color.YELLOW);
-        _colors.add(Color.GREEN);
         float w = Gdx.graphics.getWidth();
-        _backgroundWidth=_colors.size()*_buttonWidth+(_colors.size()-1)*_padding + 2*_margin;
+        _backgroundWidth=Color.values().length*_buttonWidth+(Color.values().length-1)*_padding + 2*_margin;
         _backgroundX=w/2-_backgroundWidth/2;
         _backgroundY=50;
         _backgroundHeight=_buttonWidth+2*_margin;
@@ -37,8 +33,8 @@ public class ColorMenu {
         _renderer.begin(ShapeRenderer.ShapeType.Filled);
         _renderer.setColor(1, 1, 1, 1);
         _renderer.rect(_backgroundX,_backgroundY,_backgroundWidth,_backgroundHeight);
-        for(int i=0;i<_colors.size();i++){
-            if(_colors.get(i)==_value) {
+        for(int i=0;i<Color.values().length;i++){
+            if(Color.values()[i]==_value) {
                 _renderer.setColor(.3f,.3f,.3f,1);
             }else{
                 _renderer.setColor(.7f,.7f,.7f,1);
@@ -46,7 +42,7 @@ public class ColorMenu {
             float x=_backgroundX + _margin + i*(_buttonWidth+_padding);
             float y=_backgroundY+_backgroundHeight/2-_buttonWidth/2;
             _renderer.rect(x-5,y-5,_buttonWidth+10,_buttonWidth+10);
-            Util.setRendererColor(_renderer,_colors.get(i));
+            Util.setRendererColor(_renderer,Color.values()[i]);
             _renderer.rect(x,y,_buttonWidth,_buttonWidth);
         }
         _renderer.end();
@@ -64,8 +60,8 @@ public class ColorMenu {
         if (x < 0) {
             x = 0;
         }
-        if (x >= _colors.size()) {
-            x = _colors.size()-1;
+        if (x >= Color.values().length) {
+            x = Color.values().length-1;
         }
         _value = Color.values()[x];
         _listener.onColorMenuValueChanged(_value);

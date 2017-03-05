@@ -8,7 +8,9 @@ import com.badlogic.gdx.graphics.glutils.ShapeRenderer;
 public enum Color{
     WHITE,
     YELLOW,
-    GREEN
+    GREEN,
+    BLUE,
+    RED
 }
 
 

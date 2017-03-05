@@ -17,6 +17,12 @@ public final class Util {
             case GREEN:
                 renderer.setColor(0, 1, 0, 1);
                 return;
+            case BLUE:
+                renderer.setColor(.5f, .5f, 1, 1);
+                return;
+            case RED:
+                renderer.setColor(1, 0, 0, 1);
+                return;
         }
     }
     public static short categoryBits(Color color){
@@ -27,9 +33,13 @@ public final class Util {
             case WHITE:
                 return 0x0000;
             case YELLOW:
-                return categoryBits(Color.YELLOW);
+                return (short)0xffff;
             case GREEN:
-                return categoryBits(Color.GREEN);
+                return (short)(categoryBits(Color.YELLOW) | categoryBits(Color.GREEN));
+            case BLUE:
+                return (short)(categoryBits(Color.YELLOW) | categoryBits(Color.BLUE));
+            case RED:
+                return (short)(categoryBits(Color.YELLOW) | categoryBits(Color.RED));
         }
         return 0x0000;
     }

@@ -90,6 +90,11 @@ public class Mech extends ApplicationAdapter implements InputProcessor, MenuCons
 
         Gdx.input.setInputProcessor(this);
 
+        _slides.add(new Slide(_slideCamera,_slideWorld,new Vector2(3,2),.5f));
+        _slides.add(new Slide(_slideCamera,_slideWorld,new Vector2(5,2),.5f));
+        _slides.add(new Slide(_slideCamera,_slideWorld,new Vector2(17,2),.5f));
+        _slides.add(new Slide(_slideCamera,_slideWorld,new Vector2(19,2),.5f));
+
         _nodes.add(new Node(_camera, _world, new Vector2(2,6),makeNodeIndex()));
         _nodes.add(new Node(_camera, _world, new Vector2(9,5),makeNodeIndex()));
         _nodes.add(new Node(_camera, _world, new Vector2(6,4),makeNodeIndex()));
@@ -97,14 +102,9 @@ public class Mech extends ApplicationAdapter implements InputProcessor, MenuCons
         _edges.add(new Edge(_camera, _world, _nodes.get(0), _nodes.get(1),Color.WHITE));
         _edges.add(new Edge(_camera, _world, _nodes.get(0), _nodes.get(2),Color.YELLOW));
         _edges.add(new Edge(_camera, _world, _nodes.get(1), _nodes.get(2),Color.YELLOW));
-
-        Slide slide = new Slide(_slideCamera,_slideWorld,new Vector2(17,6),.33f);
-        _slides.add(slide);
-
-        Drive drive=new Drive();
-        drive.slide=slide;
-        drive.length=1.5f;
-        _edges.get(1).addDrive(drive);
+        makeDrive(_edges.get(0));
+        makeDrive(_edges.get(1));
+        makeDrive(_edges.get(2));
 
         _toolBar=new ToolBar(this);
 
@@ -116,6 +116,15 @@ public class Mech extends ApplicationAdapter implements InputProcessor, MenuCons
         });)*/
     }
 
+    void makeDrive(Edge edge){
+        if(edge.color()==Color.WHITE){
+            return;
+        }
+        Drive drive=new Drive();
+        drive.slide=_slides.get(edge.color().ordinal()-1);
+        drive.length=2f;
+        edge.addDrive(drive);
+    }
 
     private void tick (float timeStep, int iters) {
         for(int i = 0; i< _edges.size(); i++) {
@@ -357,7 +366,9 @@ public class Mech extends ApplicationAdapter implements InputProcessor, MenuCons
             if(!(hasStartNode && hasEndNode && drag.startDrawable==drag.endDrawable)){
                 Node node1 = hasStartNode ? (Node)drag.startDrawable : makeNode(drag.startPix);
                 Node node2 = hasEndNode ? (Node)drag.endDrawable: makeNode(drag.endPix);
-                _edges.add(new Edge(_camera, _world, node1, node2, _properties.color));
+                Edge edge = new Edge(_camera, _world, node1, node2, _properties.color);
+                makeDrive(edge);
+                _edges.add(edge);
                 return;
             }
         }

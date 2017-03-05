@@ -75,6 +75,9 @@ public class Slide implements Drawable{
 
         PrismaticJointDef prismaticJointDef=new PrismaticJointDef();
         prismaticJointDef.initialize(homeBody,body,homeBody.getPosition(),new Vector2(0,1));
+        prismaticJointDef.enableLimit=true;
+        prismaticJointDef.lowerTranslation=-2.5f;
+        prismaticJointDef.upperTranslation=2.5f;
         _prismaticJoint=(PrismaticJoint)world.createJoint(prismaticJointDef);
 
         createPullBackJoint();
