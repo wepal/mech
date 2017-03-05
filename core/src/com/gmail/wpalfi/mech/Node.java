@@ -1,28 +1,35 @@
 package com.gmail.wpalfi.mech;
 
 import com.badlogic.gdx.Gdx;
-import com.badlogic.gdx.graphics.GL20;
 import com.badlogic.gdx.graphics.OrthographicCamera;
 import com.badlogic.gdx.graphics.glutils.ShapeRenderer;
 import com.badlogic.gdx.math.Vector2;
 import com.badlogic.gdx.physics.box2d.Body;
 import com.badlogic.gdx.physics.box2d.BodyDef;
+import com.badlogic.gdx.physics.box2d.CircleShape;
+import com.badlogic.gdx.physics.box2d.Fixture;
+import com.badlogic.gdx.physics.box2d.FixtureDef;
 import com.badlogic.gdx.physics.box2d.World;
-import com.sun.org.apache.xerces.internal.impl.dv.ValidationContext;
 
 public class Node implements Drawable{
     private World _world;
     private OrthographicCamera _camera;
     private Body _body;
+    private short _nodeIndex;
 
-    public Node(OrthographicCamera camera, World world, Vector2 startPos) {
+    public Node(OrthographicCamera camera, World world, Vector2 startPos, short nodeIndex) {
         _world=world;
         _camera=camera;
+        _nodeIndex=nodeIndex;
         BodyDef bd = new BodyDef();
         bd.allowSleep = false;
         bd.position.set(startPos.x, startPos.y);
         _body = world.createBody(bd);
         _body.setType(BodyDef.BodyType.DynamicBody);
+    }
+
+    public short nodeIndex(){
+        return _nodeIndex;
     }
 
     @Override
@@ -34,11 +41,14 @@ public class Node implements Drawable{
     }
 
     private float radius(){
-        return .5f * worldMeterPerScreenCm();
+        return .25f * worldMeterPerScreenCm();
     }
 
     public void render(ShapeRenderer renderer, boolean hover) {
-        renderer.begin(hover ? ShapeRenderer.ShapeType.Filled : ShapeRenderer.ShapeType.Line);
+        if(!hover){
+            return;
+        }
+        renderer.begin(ShapeRenderer.ShapeType.Line);
         renderer.setColor(.5f,.5f,.5f,1);
         Vector2 pos = _body.getPosition();
         renderer.circle(pos.x,pos.y,radius(),64);

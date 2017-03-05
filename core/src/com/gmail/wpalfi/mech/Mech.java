@@ -30,6 +30,7 @@ public class Mech extends ApplicationAdapter implements InputProcessor, MenuCons
     boolean _selectMulti=false;
     ToolBar _toolBar;
     Slider _dragSlider;
+    short _lastNodeIndex=0;
 
     @Override
     public Properties getProperties(){
@@ -57,6 +58,11 @@ public class Mech extends ApplicationAdapter implements InputProcessor, MenuCons
         _properties.pause=pause;
     }
 
+    private short makeNodeIndex(){
+        _lastNodeIndex++;
+        return _lastNodeIndex;
+    }
+
     @Override
 	public void create () {
         _renderer = new ShapeRenderer();
@@ -82,9 +88,9 @@ public class Mech extends ApplicationAdapter implements InputProcessor, MenuCons
 
         Gdx.input.setInputProcessor(this);
 
-        _nodes.add(new Node(_camera, _world, new Vector2(2,6)));
-        _nodes.add(new Node(_camera, _world, new Vector2(9,5)));
-        _nodes.add(new Node(_camera, _world, new Vector2(6,4)));
+        _nodes.add(new Node(_camera, _world, new Vector2(2,6),makeNodeIndex()));
+        _nodes.add(new Node(_camera, _world, new Vector2(9,5),makeNodeIndex()));
+        _nodes.add(new Node(_camera, _world, new Vector2(6,4),makeNodeIndex()));
 
         _edges.add(new Edge(_camera, _world, _nodes.get(0), _nodes.get(1),Color.WHITE));
         _edges.add(new Edge(_camera, _world, _nodes.get(0), _nodes.get(2),Color.YELLOW));
@@ -128,10 +134,10 @@ public class Mech extends ApplicationAdapter implements InputProcessor, MenuCons
         gl.glClear(GL20.GL_COLOR_BUFFER_BIT);
 
         //if(!_properties.useDebugRenderer){
-            renderNormal();
+            //renderNormal();
         //}else{
-            //_debugRenderer.render(_world, _camera.combined);
-            //_debugRenderer.render(_slideWorld, _slideCamera.combined);
+            _debugRenderer.render(_world, _camera.combined);
+            _debugRenderer.render(_slideWorld, _slideCamera.combined);
         //}
 
         _toolBar.render();
@@ -337,19 +343,14 @@ public class Mech extends ApplicationAdapter implements InputProcessor, MenuCons
             return;
         }
         if(drag.type==DragType.DRAWEDGE) {
-            Node node1, node2;
-            if(drag.startDrawable instanceof Node) {
-                node1 = (Node)drag.startDrawable;
-            }else{
-                node1 = makeNode(drag.startPix);
+            boolean hasStartNode = drag.startDrawable instanceof Node;
+            boolean hasEndNode = drag.endDrawable instanceof Node;
+            if(!(hasStartNode && hasEndNode && drag.startDrawable==drag.endDrawable)){
+                Node node1 = hasStartNode ? (Node)drag.startDrawable : makeNode(drag.startPix);
+                Node node2 = hasEndNode ? (Node)drag.endDrawable: makeNode(drag.endPix);
+                _edges.add(new Edge(_camera, _world, node1, node2, _properties.color));
+                return;
             }
-            if(drag.endDrawable instanceof Node) {
-                node2 = (Node)drag.endDrawable;
-            }else{
-                node2 = makeNode(drag.endPix);
-            }
-            _edges.add(new Edge(_camera, _world, node1, node2, _properties.color));
-            return;
         }
         //tap
         if(drag.type==DragType.UNDEFINED) {
@@ -364,7 +365,7 @@ public class Mech extends ApplicationAdapter implements InputProcessor, MenuCons
     }
     private Node makeNode(Vector2 pix){
         Vector2 pos = Util.unproject(_camera,pix);
-        Node node = new Node(_camera,_world,pos);
+        Node node = new Node(_camera,_world,pos,makeNodeIndex());
         _nodes.add(node);
         return node;
     }

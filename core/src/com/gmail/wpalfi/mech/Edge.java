@@ -7,6 +7,7 @@ import com.badlogic.gdx.graphics.glutils.ShapeRenderer;
 import com.badlogic.gdx.math.MathUtils;
 import com.badlogic.gdx.math.Vector2;
 import com.badlogic.gdx.physics.box2d.BodyDef;
+import com.badlogic.gdx.physics.box2d.CircleShape;
 import com.badlogic.gdx.physics.box2d.Fixture;
 import com.badlogic.gdx.physics.box2d.FixtureDef;
 import com.badlogic.gdx.physics.box2d.PolygonShape;
@@ -62,11 +63,13 @@ public class Edge implements Drawable {
         bd1.position.set(p1);
         bd1.angle = angle;
         bd1.allowSleep = false;
+        bd1.bullet=true;
         _body1 = world.createBody(bd1);
         BodyDef bd2 = new BodyDef();
         bd2.position.set(p2);
         bd2.angle = angle+MathUtils.PI;
         bd2.allowSleep = false;
+        bd2.bullet=true;
         _body2 = world.createBody(bd2);
         BodyDef.BodyType bodyType = _color==Color.WHITE ? BodyDef.BodyType.StaticBody : BodyDef.BodyType.DynamicBody;
         _body1.setType(bodyType);
@@ -86,7 +89,24 @@ public class Edge implements Drawable {
         prismaticJointDef.initialize(_body1,_body2,center,axis);
         _prismaticJoint=(PrismaticJoint)world.createJoint(prismaticJointDef);
 
+        makeEndFixture(_body1,node1.nodeIndex());
+        makeEndFixture(_body2,node2.nodeIndex());
+
         update();
+    }
+
+    private void makeEndFixture(Body body, short nodeIndex){
+        CircleShape sd = new CircleShape();
+        sd.setRadius(fullWidth()/2);
+
+        FixtureDef fdef = new FixtureDef();
+        fdef.shape = sd;
+        fdef.density = 1.0f;
+        fdef.friction = 0.3f;
+        fdef.restitution = 0.6f;
+        fdef.filter.groupIndex = (short)-nodeIndex;
+
+        body.createFixture(fdef);
     }
 
     private void updateLength(){
@@ -104,6 +124,9 @@ public class Edge implements Drawable {
         _distanceJoint.setLength(meanLength);
     }
 
+    private float fullWidth(){
+        return 0.05f;
+    }
     private void updateFixtures(){
         if(_fixture1!=null){
             _body1.destroyFixture(_fixture1);
@@ -111,22 +134,23 @@ public class Edge implements Drawable {
         }
         float length = currentLength();
         float len=length*.75f;
-        float w = 0.1f * worldMeterPerScreenCm();
-        float[] vertices1={
+        float w = fullWidth()/2;
+        float[] vertices={
                 0,-w,
                 0,+w,
                 len,+w,
                 len,-w};
-        float[] vertices2={
+/*        float[] vertices1={
                 0,-w,
                 0,+w,
                 len,+w,
                 len,-w};
+*/
 
         PolygonShape shape1 = new PolygonShape();
-        shape1.set(vertices1);
+        shape1.set(vertices);
         PolygonShape shape2 = new PolygonShape();
-        shape2.set(vertices2);
+        shape2.set(vertices);
 
         FixtureDef fdef1 = new FixtureDef();
         fdef1.shape = shape1;
@@ -135,6 +159,7 @@ public class Edge implements Drawable {
         fdef1.restitution = 0.6f;
         fdef1.filter.categoryBits = 0x0002;
         fdef1.filter.maskBits = 0x0001;
+        fdef1.filter.groupIndex = (short)-_node1.nodeIndex();
         _fixture1 = _body1.createFixture(fdef1);
 
         FixtureDef fdef2 = new FixtureDef();
@@ -142,8 +167,9 @@ public class Edge implements Drawable {
         fdef2.density = 1.0f;
         fdef2.friction = 0.3f;
         fdef2.restitution = 0.6f;
-        fdef1.filter.categoryBits = 0x0002;
-        fdef1.filter.maskBits = 0x0001;
+        fdef2.filter.categoryBits = 0x0002;
+        fdef2.filter.maskBits = 0x0001;
+        fdef2.filter.groupIndex = (short)-_node2.nodeIndex();
         _fixture2 = _body2.createFixture(fdef2);
 
         _lastUpdateLength = length;
