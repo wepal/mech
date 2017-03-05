@@ -105,7 +105,8 @@ public class Edge implements Drawable {
         fdef.friction = 0.3f;
         fdef.restitution = 0.6f;
         fdef.filter.groupIndex = (short)-nodeIndex;
-
+        fdef.filter.categoryBits = Util.categoryBits(_color);
+        fdef.filter.maskBits = Util.maskBits(_color);
         body.createFixture(fdef);
     }
 
@@ -140,12 +141,6 @@ public class Edge implements Drawable {
                 0,+w,
                 len,+w,
                 len,-w};
-/*        float[] vertices1={
-                0,-w,
-                0,+w,
-                len,+w,
-                len,-w};
-*/
 
         PolygonShape shape1 = new PolygonShape();
         shape1.set(vertices);
@@ -157,8 +152,8 @@ public class Edge implements Drawable {
         fdef1.density = 1.0f;
         fdef1.friction = 0.3f;
         fdef1.restitution = 0.6f;
-        fdef1.filter.categoryBits = 0x0002;
-        fdef1.filter.maskBits = 0x0001;
+        fdef1.filter.categoryBits = Util.categoryBits(_color);
+        fdef1.filter.maskBits = Util.maskBits(_color);
         fdef1.filter.groupIndex = (short)-_node1.nodeIndex();
         _fixture1 = _body1.createFixture(fdef1);
 
@@ -167,8 +162,8 @@ public class Edge implements Drawable {
         fdef2.density = 1.0f;
         fdef2.friction = 0.3f;
         fdef2.restitution = 0.6f;
-        fdef2.filter.categoryBits = 0x0002;
-        fdef2.filter.maskBits = 0x0001;
+        fdef2.filter.categoryBits = Util.categoryBits(_color);
+        fdef2.filter.maskBits = Util.maskBits(_color);
         fdef2.filter.groupIndex = (short)-_node2.nodeIndex();
         _fixture2 = _body2.createFixture(fdef2);
 

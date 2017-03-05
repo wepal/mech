@@ -26,6 +26,7 @@ public class ColorMenu {
         _renderer = new ShapeRenderer();
         _colors.add(Color.WHITE);
         _colors.add(Color.YELLOW);
+        _colors.add(Color.GREEN);
         float w = Gdx.graphics.getWidth();
         _backgroundWidth=_colors.size()*_buttonWidth+(_colors.size()-1)*_padding + 2*_margin;
         _backgroundX=w/2-_backgroundWidth/2;

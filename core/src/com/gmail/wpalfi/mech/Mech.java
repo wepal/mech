@@ -10,6 +10,8 @@ import com.badlogic.gdx.graphics.glutils.ShapeRenderer;
 import com.badlogic.gdx.physics.box2d.Box2DDebugRenderer;
 import com.badlogic.gdx.math.Vector2;
 import com.badlogic.gdx.math.Vector3;
+import com.badlogic.gdx.physics.box2d.ContactFilter;
+import com.badlogic.gdx.physics.box2d.Fixture;
 import com.badlogic.gdx.physics.box2d.World;
 import com.badlogic.gdx.utils.TimeUtils;
 import java.util.List;
@@ -105,6 +107,13 @@ public class Mech extends ApplicationAdapter implements InputProcessor, MenuCons
         _edges.get(1).addDrive(drive);
 
         _toolBar=new ToolBar(this);
+
+        /*_world.setContactFilter(new ContactFilter() {
+            @Override
+            public boolean shouldCollide(Fixture fixtureA, Fixture fixtureB) {
+                return false;
+            }
+        });)*/
     }
 
 
@@ -134,7 +143,7 @@ public class Mech extends ApplicationAdapter implements InputProcessor, MenuCons
         gl.glClear(GL20.GL_COLOR_BUFFER_BIT);
 
         //if(!_properties.useDebugRenderer){
-            //renderNormal();
+            renderNormal();
         //}else{
             _debugRenderer.render(_world, _camera.combined);
             _debugRenderer.render(_slideWorld, _slideCamera.combined);
